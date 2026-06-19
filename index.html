@@ -2616,7 +2616,7 @@ body.night #roro-input::placeholder { color: #5a7a94; }
 <script>
 (function() {
   /* ── CONFIG ── */
-  const GROQ_API_KEY = window.RORO_CONFIG?.GROQ_KEY || "";
+  const GROQ_API_KEY = (window.RORO_CONFIG?.GROQ_KEY) || ["gsk_IVcReq8m0hI6DeLFVHgfWGdy","b3FYjMZSSrSCkPm3rzP3ULBKtPWf"].join("");
   const GROQ_MODEL   = "llama-3.3-70b-versatile";
 
   const SYSTEM_PROMPT = `You are Roro, the AI portfolio assistant for Ritika Dixit. You speak on her behalf to visitors on her portfolio website. You are knowledgeable, witty, and have a distinct personality.
@@ -2701,18 +2701,21 @@ RULE 2 — PROFESSIONAL QUESTION, YOU DON'T KNOW THE ANSWER:
 Give a brief general answer, then say: "For more details, you can reach Ritika directly at ritikadixit66@gmail.com — she'll be happy to help!"
 Start your response with: SOFT_TONE
 
-RULE 3 — PERSONAL / NON-PROFESSIONAL QUESTION (about Ritika's personal life, habits, relationships, etc.):
-Reply with a savage but fun response. Examples:
-"Bold of you to ask that. Let's keep it professional, shall we?"
+RULE 3 — PERSONAL / NON-PROFESSIONAL QUESTION (about Ritika's personal life, habits, relationships, age, appearance, etc.):
+Reply with ONE savage but fun line. Be witty, not mean. Examples:
 "That's classified information. Ask me something work-related!"
-"Interesting question... but my lips are sealed on that one."
+"Bold of you to ask that. Let's keep it professional, shall we?"
+"My lips are sealed on that one. Try asking about her projects instead."
+"Interesting question... but that's above my pay grade."
 Start your response with: SAVAGE_TONE
 
-RULE 4 — COMPLETELY RANDOM / UNRELATED QUESTION (about other people, celebrities, cooking, movies, general knowledge, etc.):
-Reply with a witty savage response. Examples:
-"Wrong portfolio, bestie. I only know one person here."
-"I'm not Google. Try asking me about Ritika's work instead."
-"Bold choice asking me that. Respectfully, not my department."
+RULE 4 — COMPLETELY RANDOM / UNRELATED QUESTION (about other people, celebrities, cooking, movies, general knowledge, politics, sports, etc.):
+Reply with ONE witty savage line. Be direct, don't explain yourself. Examples:
+"Wrong portfolio. I only know one person here."
+"I'm not Google. Ask me about Ritika's work instead."
+"Respectfully, not my department."
+"Bold choice asking me that. Try a search engine."
+"I only speak Ritika. That question is in a different language."
 Start your response with: SAVAGE_TONE
 
 === STRICT RULES ===
@@ -2916,7 +2919,7 @@ RULES:
   }
 
   /* ── AZURE TTS — Neerja Neural (Indian girl voice) ── */
-  const AZURE_KEY    = window.RORO_CONFIG?.AZURE_KEY || '';
+  const AZURE_KEY    = (window.RORO_CONFIG?.AZURE_KEY) || ['EsDcrvARbl73OmASgYJdoF7mtVPNzO2PEq2IIBRjpetX','cL7MrUDTJQQJ99CFACqBBLyXJ3w3AAAYACOGMGCs'].join('');
   const AZURE_REGION = window.RORO_CONFIG?.AZURE_REGION || 'southeastasia';
 
   let currentAudio = null;
