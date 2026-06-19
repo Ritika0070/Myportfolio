@@ -2134,7 +2134,7 @@ html { scroll-behavior: smooth; }
 <script>
 // ── CONTACT FORM — EmailJS ──
 (function(){
-  emailjs.init({ publicKey: "Sn2xPZKuAhKed-K8g" });
+  emailjs.init({ publicKey: window.RORO_CONFIG?.EMAILJS_PUBLIC_KEY || "" });
 })();
 
 function handleSubmit() {
@@ -2166,7 +2166,7 @@ function handleSubmit() {
   btn.disabled = true;
   btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sending...';
 
-  emailjs.send("roro_poro", "0wu5uks", {
+  emailjs.send(window.RORO_CONFIG?.EMAILJS_SERVICE_ID || "", window.RORO_CONFIG?.EMAILJS_TEMPLATE_ID || "", {
     name:    name,
     email:   email,
     subject: subject || 'Portfolio Contact',
@@ -2663,7 +2663,7 @@ body.night #roro-input::placeholder { color: #5a7a94; }
 <script>
 (function() {
   /* ── CONFIG ── */
-  const GROQ_API_KEY = (window.RORO_CONFIG?.GROQ_KEY) || ["gsk_IVcReq8m0hI6DeLFVHgfWGdy","b3FYjMZSSrSCkPm3rzP3ULBKtPWf"].join("");
+  const GROQ_API_KEY = window.RORO_CONFIG?.GROQ_KEY || "";
   const GROQ_MODEL   = "llama-3.3-70b-versatile";
 
   const SYSTEM_PROMPT = `You are Roro, the AI portfolio assistant for Ritika Dixit. You speak on her behalf to visitors on her portfolio website. You are knowledgeable, witty, and have a distinct personality.
@@ -2966,7 +2966,7 @@ RULES:
   }
 
   /* ── AZURE TTS — Neerja Neural (Indian girl voice) ── */
-  const AZURE_KEY    = (window.RORO_CONFIG?.AZURE_KEY) || ['EsDcrvARbl73OmASgYJdoF7mtVPNzO2PEq2IIBRjpetX','cL7MrUDTJQQJ99CFACqBBLyXJ3w3AAAYACOGMGCs'].join('');
+  const AZURE_KEY    = window.RORO_CONFIG?.AZURE_KEY || '';
   const AZURE_REGION = window.RORO_CONFIG?.AZURE_REGION || 'southeastasia';
 
   let currentAudio = null;
