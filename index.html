@@ -2183,7 +2183,8 @@ function handleSubmit() {
     });
   })
   .catch(function(err) {
-    errorBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Something went wrong. Please email me directly at ritikadixit66@gmail.com';
+    var errMsg = err && err.text ? err.text : (err && err.status ? 'Status: ' + err.status : JSON.stringify(err));
+    errorBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Something went wrong (' + errMsg + '). Email directly: ritikadixit66@gmail.com';
     errorBox.style.display = 'block';
     btn.innerHTML = 'Send Message <i class="fa-solid fa-paper-plane"></i>';
     btn.disabled = false;
