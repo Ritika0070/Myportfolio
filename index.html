@@ -7,6 +7,7 @@
 <title>Ritika Dixit | Full Stack Developer</title>
 <link href="css/style.css" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <!-- ============================================================
   INLINE STYLES — all section-specific styles live here
   Sections in order: HOME, ABOUT, SERVICES, PROJECTS, EXPERIENCE, CONTACT
@@ -1909,28 +1910,28 @@ html { scroll-behavior: smooth; }
         </p>
 <div class="contact-details">
 <a class="contact-detail" href="mailto:ritikadixit66@gmail.com">
-<div class="detail-icon">📧</div>
+<div class="detail-icon"><i class="fa-solid fa-envelope"></i></div>
 <div>
 <div class="detail-label">Email</div>
 <div class="detail-value">ritikadixit66@gmail.com</div>
 </div>
 </a>
 <a class="contact-detail" href="https://www.linkedin.com/in/ritika-dixit-a3a941286" target="_blank">
-<div class="detail-icon">💼</div>
+<div class="detail-icon"><i class="fa-brands fa-linkedin"></i></div>
 <div>
 <div class="detail-label">LinkedIn</div>
 <div class="detail-value">linkedin.com/in/ritika-dixit</div>
 </div>
 </a>
 <a class="contact-detail" href="https://github.com/Ritika0070" target="_blank">
-<div class="detail-icon">🐙</div>
+<div class="detail-icon"><i class="fa-brands fa-github"></i></div>
 <div>
 <div class="detail-label">GitHub</div>
 <div class="detail-value">github.com/Ritika0070</div>
 </div>
 </a>
 <div class="contact-detail" style="cursor:default;">
-<div class="detail-icon">📍</div>
+<div class="detail-icon"><i class="fa-solid fa-location-dot"></i></div>
 <div>
 <div class="detail-label">Location</div>
 <div class="detail-value">Greater Noida, India</div>
@@ -1960,9 +1961,10 @@ html { scroll-behavior: smooth; }
 <textarea class="form-textarea" id="message" placeholder="Tell me about your project or idea..."></textarea>
 </div>
 <button class="form-submit" onclick="handleSubmit()">
-          Send Message 🚀
+          Send Message <i class="fa-solid fa-paper-plane"></i>
         </button>
-<div id="form-success">✅ Message sent! I'll get back to you soon.</div>
+<div id="form-error" style="display:none;margin-top:12px;padding:10px 14px;border-radius:10px;font-size:13px;background:rgba(239,68,68,0.08);color:#dc2626;border:1px solid rgba(239,68,68,0.2);"></div>
+<div id="form-success" style="display:none;"><i class="fa-solid fa-circle-check"></i> Message sent! I'll get back to you soon.</div>
 </div>
 </div>
 </div>
@@ -2130,19 +2132,63 @@ html { scroll-behavior: smooth; }
 </script>
 
 <script>
-// ── CONTACT FORM ──
+// ── CONTACT FORM — EmailJS ──
+(function(){
+  emailjs.init({ publicKey: "Sn2xPZKuAhKed-K8g" });
+})();
+
 function handleSubmit() {
   var name    = document.getElementById('name').value.trim();
   var email   = document.getElementById('email').value.trim();
   var subject = document.getElementById('subject').value.trim();
   var message = document.getElementById('message').value.trim();
-  if (!name || !email || !message) {
-    alert('Please fill in all required fields.');
+
+  // Validation
+  var errors = [];
+  if (!name)    errors.push('Name is required.');
+  if (!email)   errors.push('Email is required.');
+  if (email && !/^[^@]+@[^@]+\.[^@]+$/.test(email)) errors.push('Please enter a valid email.');
+  if (!message) errors.push('Message is required.');
+
+  var errorBox = document.getElementById('form-error');
+  var successBox = document.getElementById('form-success');
+  errorBox.style.display = 'none';
+  successBox.style.display = 'none';
+
+  if (errors.length) {
+    errorBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ' + errors.join(' ');
+    errorBox.style.display = 'block';
     return;
   }
-  var mailto = 'mailto:ritikadixit66@gmail.com?subject=' + encodeURIComponent(subject || 'Portfolio Contact') + '&body=' + encodeURIComponent('Name: ' + name + '\nEmail: ' + email + '\n\n' + message);
-  window.location.href = mailto;
-  document.getElementById('form-success').style.display = 'block';
+
+  // Disable button & show loading
+  var btn = document.querySelector('.form-submit');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sending...';
+
+  emailjs.send("roro_poro", "template_0hyxana", {
+    name:    name,
+    email:   email,
+    subject: subject || 'Portfolio Contact',
+    message: message,
+    title:   subject || 'Portfolio Contact'
+  })
+  .then(function() {
+    successBox.style.display = 'block';
+    btn.innerHTML = 'Send Message <i class="fa-solid fa-paper-plane"></i>';
+    btn.disabled = false;
+    // Clear form
+    ['name','email','subject','message'].forEach(function(id){
+      document.getElementById(id).value = '';
+    });
+  })
+  .catch(function(err) {
+    errorBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Something went wrong. Please email me directly at ritikadixit66@gmail.com';
+    errorBox.style.display = 'block';
+    btn.innerHTML = 'Send Message <i class="fa-solid fa-paper-plane"></i>';
+    btn.disabled = false;
+    console.error('EmailJS error:', err);
+  });
 }
 </script>
 
