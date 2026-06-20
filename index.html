@@ -369,7 +369,7 @@ body.night .mobile-menu a:hover { background: rgba(126,184,232,0.08); }
   .hero-bio { font-size: 14px !important; }
   .hero-btns { flex-direction: column; gap: 10px; width: 100%; }
   .btn-primary, .btn-outline { width: 100% !important; justify-content: center; }
-  #lottie-wrap { width: min(300px, 100%); }
+  #lottie-wrap { width: min(300px, 100%); transform: scale(1.25); transform-origin: left center; }
   .float-code { display: none; }
   .love-cat-wrap, .cry-cat-wrap { width: 90px; }
   #love-cat, #cry-cat { width: 90px !important; }
@@ -1236,6 +1236,7 @@ body.night .mobile-menu a:hover { background: rgba(126,184,232,0.08); }
       text-decoration: none;
       transition: all 0.3s, background 1.4s, border-color 1.4s;
     }
+    .contact-detail > div:last-child { min-width: 0; }
     body.day   .contact-detail { background: rgba(255,255,255,0.75); border-color: rgba(31,78,121,0.1); }
     body.night .contact-detail { background: rgba(10,22,50,0.65);    border-color: rgba(126,184,232,0.1); }
     .contact-detail:hover { transform: translateX(5px); }
@@ -1261,6 +1262,8 @@ body.night .mobile-menu a:hover { background: rgba(126,184,232,0.08); }
     .detail-value {
       font-size: 14px; font-weight: 500;
       transition: color 1.4s;
+      overflow-wrap: break-word;
+      word-break: break-word;
     }
     body.day   .detail-value { color: #222; }
     body.night .detail-value { color: #c8dff0; }
@@ -1270,6 +1273,8 @@ body.night .mobile-menu a:hover { background: rgba(126,184,232,0.08); }
       display: flex; flex-direction: column; gap: 18px;
       padding: 32px; border-radius: 20px; border: 1px solid;
       transition: background 1.4s, border-color 1.4s;
+      position: relative;
+      margin-top: 62px;
     }
     body.day   .contact-form { background: rgba(255,255,255,0.8); border-color: rgba(31,78,121,0.1); }
     body.night .contact-form { background: rgba(10,22,50,0.7);    border-color: rgba(126,184,232,0.12); }
@@ -1322,6 +1327,76 @@ body.night .mobile-menu a:hover { background: rgba(126,184,232,0.08); }
     @media (max-width: 768px) {
       .contact-wrapper { grid-template-columns: 1fr; }
       .form-row { grid-template-columns: 1fr; }
+    }
+
+    /* cat mascot perched on top of the message box */
+    .contact-cat-wrap {
+      position: absolute;
+      top: -62px;
+      right: 18px;
+      width: clamp(140px, 18vw, 200px);
+      z-index: 2;
+      pointer-events: none;
+      filter: drop-shadow(0 10px 18px rgba(31,78,121,0.2));
+      animation: contactCatBob 3.4s ease-in-out infinite;
+    }
+    body.night .contact-cat-wrap { filter: drop-shadow(0 10px 22px rgba(126,184,232,0.12)); }
+    #contact-cat { width: 100%; }
+    @keyframes contactCatBob {
+      0%, 100% { transform: translateY(0); }
+      50%      { transform: translateY(-8px); }
+    }
+    @media (max-width: 768px) {
+      .contact-cat-wrap { top: -44px; right: 8px; width: clamp(110px, 26vw, 150px); }
+      .contact-form { margin-top: 44px; }
+    }
+
+    /* paper plane: diagonal flight from beside the email card, ending at the
+       top-right of the vacant area (on-screen). Actual start/end coordinates
+       are set at runtime via JS (measured from the real email card position),
+       these are just sane fallbacks. */
+    #contact { position: relative; }
+    .paperplane-wrap {
+      position: absolute;
+      width: 170px;
+      z-index: 2;
+      pointer-events: none;
+      left: var(--plane-start-left, -110px);
+      top: var(--plane-start-top, 400px);
+      transform: rotate(var(--plane-angle, -32deg));
+      animation: paperplaneFlyDiagonal 9s linear infinite;
+    }
+    #paperplane-lottie { width: 100%; }
+    @keyframes paperplaneFlyDiagonal {
+      0%   { left: var(--plane-start-left, -110px); top: var(--plane-start-top, 400px); }
+      100% { left: var(--plane-end-left, 420px);    top: var(--plane-end-top, 50px); }
+    }
+    @media (max-width: 768px) {
+      .paperplane-wrap { width: 120px; animation-duration: 6.5s; }
+    }
+
+    /* monoplane: diagonal flight from above the profile photo, ending at the
+       top-right of the vacant area (on-screen). Actual start/end coordinates
+       are set at runtime via JS (measured from the real photo position),
+       these are just sane fallbacks. */
+    #about { position: relative; }
+    .monoplane-wrap {
+      position: absolute;
+      width: 130px;
+      z-index: 2;
+      pointer-events: none;
+      left: var(--mono-start-left, -110px);
+      top: var(--mono-start-top, 100px);
+      transform: rotate(var(--mono-angle, -28deg));
+      animation: monoplaneFlyDiagonal 8.5s linear infinite;
+    }
+    #monoplane-lottie { width: 100%; }
+    @keyframes monoplaneFlyDiagonal {
+      0%   { left: var(--mono-start-left, -110px); top: var(--mono-start-top, 100px); }
+      100% { left: var(--mono-end-left, 420px);    top: var(--mono-end-top, 40px); }
+    }
+    @media (max-width: 768px) {
+      .monoplane-wrap { width: 95px; animation-duration: 6s; }
     }
   
 
@@ -1681,6 +1756,7 @@ html { scroll-behavior: smooth; }
   Edit: profile image, bio text, skills list
   ============================================================ -->
 <section id="about">
+<div class="monoplane-wrap"><div id="monoplane-lottie"></div></div>
 <div class="page-section">
 <div class="section-heading reveal">
 <h2>About <span>Me</span></h2>
@@ -2511,6 +2587,7 @@ body.night .tooltip-tag { background: rgba(126,184,232,0.1); color: #7eb8e8; }
   Edit: contact info (email, LinkedIn, GitHub, location), form fields
   ============================================================ -->
 <section id="contact">
+<div class="paperplane-wrap"><div id="paperplane-lottie"></div></div>
 <div class="page-section">
 <div class="section-heading reveal">
 <h2>Get In <span>Touch</span></h2>
@@ -2560,6 +2637,7 @@ body.night .tooltip-tag { background: rgba(126,184,232,0.1); color: #7eb8e8; }
 
   <!-- ── RIGHT: Contact Form ── -->
 <div class="contact-form reveal">
+<div class="contact-cat-wrap"><div id="contact-cat"></div></div>
 <div class="form-row">
 <div class="form-group">
 <label class="form-label">Your Name</label>
@@ -2670,6 +2748,102 @@ body.night .tooltip-tag { background: rgba(126,184,232,0.1); color: #7eb8e8; }
       autoplay: true,
       path: 'assets/girl_sofa_colored.json'
     });
+
+    // ── CONTACT CAT — mascot perched on the message box ──
+    lottie.loadAnimation({
+      container: document.getElementById('contact-cat'),
+      renderer: 'svg',
+      loop: true,
+      autoplay: true,
+      path: 'assets/Cat.json'
+    });
+
+    // ── PAPER PLANE — flies across the contact section, loops via CSS ──
+    lottie.loadAnimation({
+      container: document.getElementById('paperplane-lottie'),
+      renderer: 'svg',
+      loop: true,
+      autoplay: true,
+      path: 'assets/Paperplane.json'
+    });
+
+    // ── PAPER PLANE PATH — start beside the email card, end near the top-right of the screen (clamped on-screen) ──
+    function positionPaperplanePath() {
+      var contact = document.getElementById('contact');
+      var card = contact ? contact.querySelector('.contact-detail') : null;
+      var plane = contact ? contact.querySelector('.paperplane-wrap') : null;
+      if (!contact || !card || !plane) return;
+
+      var contactRect = contact.getBoundingClientRect();
+      var cardRect = card.getBoundingClientRect();
+
+      var planeWidth = window.innerWidth <= 768 ? 120 : 170;
+      var planeHeight = planeWidth * (600 / 800); // lottie canvas is 800x600
+
+      var startLeft = (cardRect.left - contactRect.left) - planeWidth - 24;
+      var startTop  = (cardRect.top - contactRect.top) + (cardRect.height / 2) - (planeHeight / 2);
+
+      // same long rightward sweep as before, just clamped so it stops at the
+      // edge of the viewport instead of flying past it
+      var endLeft = (window.innerWidth - contactRect.left) - planeWidth - 30;
+      var endTop  = 40;
+
+      var dx = endLeft - startLeft;
+      var dy = endTop - startTop;
+      var angle = Math.atan2(dy, dx) * (180 / Math.PI);
+
+      plane.style.setProperty('--plane-start-left', startLeft + 'px');
+      plane.style.setProperty('--plane-start-top', startTop + 'px');
+      plane.style.setProperty('--plane-end-left', endLeft + 'px');
+      plane.style.setProperty('--plane-end-top', endTop + 'px');
+      plane.style.setProperty('--plane-angle', angle + 'deg');
+    }
+    window.addEventListener('load', positionPaperplanePath);
+    window.addEventListener('resize', positionPaperplanePath);
+
+    // ── MONOPLANE — flies across the about section, loops via CSS ──
+    lottie.loadAnimation({
+      container: document.getElementById('monoplane-lottie'),
+      renderer: 'svg',
+      loop: true,
+      autoplay: true,
+      path: 'assets/Monoplane.json'
+    });
+
+    // ── MONOPLANE PATH — start above the profile photo, end near the top-right of the screen (clamped on-screen) ──
+    function positionMonoplanePath() {
+      var about = document.getElementById('about');
+      var photo = about ? about.querySelector('.about-photo-wrap') : null;
+      var plane = about ? about.querySelector('.monoplane-wrap') : null;
+      if (!about || !photo || !plane) return;
+
+      var aboutRect = about.getBoundingClientRect();
+      var photoRect = photo.getBoundingClientRect();
+
+      var planeWidth = window.innerWidth <= 768 ? 95 : 130;
+      var planeHeight = planeWidth; // monoplane lottie canvas is square (500x500)
+
+      // same anchoring as the contact page plane: start to the LEFT of the
+      // element, vertically centered on it, so the climb to the top has real height
+      var startLeft = (photoRect.left - aboutRect.left) - planeWidth - 24;
+      var startTop  = (photoRect.top - aboutRect.top) + (photoRect.height / 2) - (planeHeight / 2);
+
+      // same clamped sweep as the contact page plane — stays on-screen
+      var endLeft = (window.innerWidth - aboutRect.left) - planeWidth - 30;
+      var endTop  = 40;
+
+      var dx = endLeft - startLeft;
+      var dy = endTop - startTop;
+      var angle = Math.atan2(dy, dx) * (180 / Math.PI);
+
+      plane.style.setProperty('--mono-start-left', startLeft + 'px');
+      plane.style.setProperty('--mono-start-top', startTop + 'px');
+      plane.style.setProperty('--mono-end-left', endLeft + 'px');
+      plane.style.setProperty('--mono-end-top', endTop + 'px');
+      plane.style.setProperty('--mono-angle', angle + 'deg');
+    }
+    window.addEventListener('load', positionMonoplanePath);
+    window.addEventListener('resize', positionMonoplanePath);
 
     // ── LAMP GLOW — precise position under lamp bulb ──
     // Animation canvas is 1000x622
