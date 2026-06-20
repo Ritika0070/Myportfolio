@@ -449,26 +449,58 @@ body.night .mobile-menu a:hover { background: rgba(126,184,232,0.08); }
       flex-direction: column;
       align-items: center;
       gap: 16px;
+      perspective: 1200px;
     }
     .about-photo {
       width: 280px; height: 320px;
       border-radius: 16px; overflow: hidden;
       border: 2px solid;
-      transition: border-color 1.4s, box-shadow 1.4s;
+      transition: border-color 1.4s, box-shadow 0.2s, transform 0.1s ease-out;
+      position: relative;
+      transform-style: preserve-3d;
+      cursor: pointer;
+      will-change: transform;
     }
     body.day   .about-photo { border-color: rgba(31,78,121,0.25); box-shadow: 0 8px 30px rgba(31,78,121,0.1); }
     body.night .about-photo { border-color: rgba(126,184,232,0.2); box-shadow: 0 8px 30px rgba(0,0,0,0.3); }
+    .about-photo.tilting {
+      transition: transform 0.05s linear;
+    }
+    body.day   .about-photo.tilting { box-shadow: 0 26px 60px rgba(31,78,121,0.28); }
+    body.night .about-photo.tilting { box-shadow: 0 26px 60px rgba(0,0,0,0.55); }
     .about-photo img {
       width: 100%; height: 100%;
       object-fit: cover;
       object-position: center 60%;
       display: block;
     }
+    /* glossy shine sweep */
+    .photo-shine {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: linear-gradient(
+        115deg,
+        transparent 30%,
+        rgba(255,255,255,0.35) 45%,
+        rgba(255,255,255,0.05) 52%,
+        transparent 65%
+      );
+      background-size: 250% 250%;
+      background-position: 130% 130%;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    .about-photo.tilting .photo-shine {
+      opacity: 1;
+      transition: background-position 0.05s linear, opacity 0.3s ease;
+    }
     .about-badge {
       padding: 6px 16px; border-radius: 20px;
       font-size: 13px; font-weight: 600;
       display: flex; align-items: center; gap: 8px;
-      transition: background 1.4s, color 1.4s;
+      transition: background 1.4s, color 1.4s, transform 0.1s ease-out;
+      will-change: transform;
     }
     body.day   .about-badge { background: rgba(31,78,121,0.08); color: #1F4E79; }
     body.night .about-badge { background: rgba(126,184,232,0.08); color: #7eb8e8; }
@@ -485,6 +517,7 @@ body.night .mobile-menu a:hover { background: rgba(126,184,232,0.08); }
     body.night .about-text p { color: #8ab4c8; }
 
     .skills-section { max-width: 1100px; margin: 0 auto; }
+    #solarSystem { max-width: none; width: 100vw; margin-left: calc(-50vw + 50%); }
     .skills-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 22px; }
     .skill-card {
       padding: 26px; border-radius: 18px; border: 1px solid;
@@ -795,8 +828,6 @@ body.night .mobile-menu a:hover { background: rgba(126,184,232,0.08); }
 
     .projects-page {
       position: relative; z-index: 10;
-      height: 100vh;
-      overflow: hidden;
       display: flex; flex-direction: column;
     }
 
@@ -818,12 +849,11 @@ body.night .mobile-menu a:hover { background: rgba(126,184,232,0.08); }
     body.night .divider { background: #2979b8; }
 
     .scroll-track {
-      flex: 1;
       display: flex;
-      align-items: center;
-      overflow: hidden;
+      align-items: stretch;
+      overflow: visible;
       position: relative;
-      padding: 0 80px;
+      padding: 20px 80px 60px;
     }
 
     .scroll-container {
@@ -839,7 +869,7 @@ body.night .mobile-menu a:hover { background: rgba(126,184,232,0.08); }
       display: grid;
       grid-template-columns: 1.2fr 1fr;
       gap: 50px;
-      align-items: center;
+      align-items: start;
       flex-shrink: 0;
     }
 
@@ -1632,9 +1662,10 @@ html { scroll-behavior: smooth; }
 <div class="section-divider"></div>
 </div>
 <div class="about-grid">
-<div class="about-photo-wrap reveal">
-<div class="about-photo">
+<div class="about-photo-wrap reveal" id="tiltWrap">
+<div class="about-photo" id="tiltCard">
 <img alt="Ritika Dixit" src="assets/ritika.jpeg"/>
+<div class="photo-shine"></div>
 </div>
 <div class="about-badge">
 <i class="fa-solid fa-circle"></i> Open to Opportunities
@@ -1665,95 +1696,472 @@ html { scroll-behavior: smooth; }
 <h2>Technologies <span>&amp; Tools</span></h2>
 <div class="section-divider"></div>
 </div>
-<div class="skills-grid">
-<div class="skill-card reveal">
-<div class="skill-card-header">
-<div class="skill-card-title"><i class="fa-solid fa-display"></i> Frontend</div>
-<div class="skill-count">4</div>
+
+<!-- SOLAR SYSTEM (elliptical, JS-driven, upright labels) -->
+<style>
+.solar-wrap {
+  position: relative;
+  width: 100%;
+  height: 720px;
+  overflow: hidden;
+  padding-top: 30px;
+  box-sizing: border-box;
+}
+
+/* ── ORBIT ELLIPSE RINGS ── */
+.orbit-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  border-radius: 50%;
+  border: 1px dashed;
+  pointer-events: none;
+}
+body.day   .orbit-ring { border-color: rgba(31,78,121,0.16); }
+body.night .orbit-ring { border-color: rgba(126,184,232,0.14); }
+
+/* ── SUN ── */
+.solar-sun-stage {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 160px;
+  height: 160px;
+  z-index: 10;
+}
+.solar-sun {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  z-index: 1;
+}
+body.day .solar-sun {
+  background: radial-gradient(circle at 38% 32%, #ffd95e, #f0a830 65%, #d97f12);
+  box-shadow: 0 0 0 8px rgba(245,166,35,0.1), 0 0 36px rgba(245,166,35,0.3);
+}
+body.night .solar-sun {
+  background: radial-gradient(circle at 38% 32%, #ffeca0, #f2c93a 65%, #b8860b);
+  box-shadow: 0 0 0 8px rgba(255,215,0,0.08), 0 0 40px rgba(255,215,0,0.22);
+}
+/* shadow cast onto the sphere surface, under the cat, inside the clipped circle */
+.solar-sun::before {
+  content: '';
+  position: absolute;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 92px;
+  height: 22px;
+  background: radial-gradient(ellipse at center, rgba(110,55,0,0.45) 0%, transparent 75%);
+  border-radius: 50%;
+  z-index: 1;
+}
+.solar-sun::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  animation: sunPulse 3s ease-in-out infinite;
+  z-index: 0;
+}
+body.day   .solar-sun::after { border: 2px solid rgba(245,166,35,0.3); }
+body.night .solar-sun::after { border: 2px solid rgba(255,215,0,0.25); }
+@keyframes sunPulse {
+  0%,100% { transform: scale(1); opacity: 1; }
+  50%      { transform: scale(1.1); opacity: 0.25; }
+}
+
+/* cat perched ON TOP of the sphere's upper curve — outside the clip */
+#sunCat {
+  position: absolute;
+  width: 136px;
+  height: 136px;
+  top: -54px;
+  left: 50%;
+  transform: translateX(-50%) rotate(-4deg);
+  pointer-events: none;
+  z-index: 3;
+  filter: drop-shadow(0 10px 8px rgba(120,60,0,0.4));
+}
+
+/* ── PLANET (positioned absolutely by JS, always upright) ── */
+.planet {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+  z-index: 5;
+  will-change: left, top;
+}
+.planet-dot {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  position: relative;
+  color: #fff;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.35);
+}
+.planet:hover .planet-dot { transform: scale(1.18); }
+
+/* ── PLANET THEMES (real planet inspired) ── */
+
+/* Frontend = Earth — blue/green sphere */
+#p1 .planet-dot {
+  background:
+    radial-gradient(circle at 32% 28%, rgba(255,255,255,0.55), transparent 40%),
+    radial-gradient(circle at 65% 70%, #3a8c4a 0%, transparent 35%),
+    radial-gradient(circle at 70% 30%, #2d7d6e 0%, transparent 30%),
+    radial-gradient(circle at 35% 65%, #1a5fa8 0%, #15406e 70%);
+  box-shadow: inset -10px -10px 22px rgba(0,0,0,0.4), inset 6px 6px 14px rgba(255,255,255,0.15), 0 4px 24px rgba(26,95,168,0.45);
+}
+
+/* Backend = Mars — rusty red/orange sphere */
+#p2 .planet-dot {
+  background:
+    radial-gradient(circle at 32% 28%, rgba(255,255,255,0.45), transparent 40%),
+    radial-gradient(circle at 60% 65%, #b5491f 0%, transparent 40%),
+    radial-gradient(circle at 35% 60%, #c9622f 0%, #8a3417 75%);
+  box-shadow: inset -10px -10px 22px rgba(0,0,0,0.4), inset 6px 6px 14px rgba(255,255,255,0.12), 0 4px 24px rgba(180,73,31,0.4);
+}
+
+/* Languages = Mercury — grey rocky sphere */
+#p3 .planet-dot {
+  background:
+    radial-gradient(circle at 32% 28%, rgba(255,255,255,0.5), transparent 40%),
+    radial-gradient(circle at 60% 65%, #8a8378 0%, transparent 40%),
+    radial-gradient(circle at 35% 60%, #a39c8f 0%, #5e584f 75%);
+  box-shadow: inset -10px -10px 22px rgba(0,0,0,0.45), inset 6px 6px 14px rgba(255,255,255,0.12), 0 4px 24px rgba(94,88,79,0.4);
+}
+
+/* Databases = Jupiter — banded gas giant */
+#p4 .planet-dot {
+  background:
+    radial-gradient(circle at 32% 25%, rgba(255,255,255,0.4), transparent 35%),
+    repeating-linear-gradient(
+      0deg,
+      #d9a35c 0px, #d9a35c 6px,
+      #c98c4a 6px, #c98c4a 12px,
+      #e8c08a 12px, #e8c08a 17px,
+      #b87a3e 17px, #b87a3e 23px
+    );
+  box-shadow: inset -10px -10px 22px rgba(0,0,0,0.35), inset 6px 6px 14px rgba(255,255,255,0.15), 0 4px 24px rgba(201,140,74,0.4);
+}
+
+/* Security = Saturn — gold sphere + ring */
+#p5 .planet-dot {
+  background:
+    radial-gradient(circle at 32% 28%, rgba(255,255,255,0.5), transparent 40%),
+    radial-gradient(circle at 60% 65%, #e0b050 0%, transparent 40%),
+    radial-gradient(circle at 35% 60%, #f0cf85 0%, #b8893a 75%);
+  box-shadow: inset -10px -10px 22px rgba(0,0,0,0.35), inset 6px 6px 14px rgba(255,255,255,0.18), 0 4px 24px rgba(224,176,80,0.45);
+  z-index: 6;
+}
+#p5 .planet-dot::before {
+  content: '';
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 168px;
+  height: 44px;
+  transform: translate(-50%, -50%) rotate(-18deg);
+  border-radius: 50%;
+  border: 7px solid rgba(224,176,80,0.55);
+  border-top-color: rgba(240,207,133,0.85);
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* Cloud = Neptune — deep blue sphere */
+#p6 .planet-dot {
+  background:
+    radial-gradient(circle at 32% 28%, rgba(255,255,255,0.45), transparent 40%),
+    radial-gradient(circle at 60% 65%, #2e4ea8 0%, transparent 40%),
+    radial-gradient(circle at 35% 60%, #3f63c9 0%, #1c2f6e 75%);
+  box-shadow: inset -10px -10px 22px rgba(0,0,0,0.4), inset 6px 6px 14px rgba(255,255,255,0.12), 0 4px 24px rgba(63,99,201,0.45);
+}
+
+/* Tools = Venus — yellow/orange hazy sphere */
+#p7 .planet-dot {
+  background:
+    radial-gradient(circle at 32% 28%, rgba(255,255,255,0.5), transparent 40%),
+    radial-gradient(circle at 60% 65%, #e8c468 0%, transparent 40%),
+    radial-gradient(circle at 35% 60%, #f0d98c 0%, #c79a3c 75%);
+  box-shadow: inset -10px -10px 22px rgba(0,0,0,0.3), inset 6px 6px 14px rgba(255,255,255,0.18), 0 4px 24px rgba(232,196,104,0.4);
+}
+
+body.day   .planet:hover .planet-dot { filter: brightness(1.12); }
+body.night .planet:hover .planet-dot { filter: brightness(1.25); }
+
+.planet-label {
+  position: absolute;
+  top: 104px;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-align: center;
+  opacity: 0.9;
+}
+body.day   .planet-label { color: #1F4E79; }
+body.night .planet-label { color: #7eb8e8; }
+
+.planet-tooltip {
+  position: absolute;
+  bottom: 116px;
+  left: 50%;
+  transform: translateX(-50%) scale(0.85);
+  width: 190px;
+  border-radius: 14px;
+  padding: 12px 14px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.22s ease, transform 0.22s ease;
+  z-index: 30;
+}
+body.day .planet-tooltip {
+  background: rgba(255,255,255,0.98);
+  box-shadow: 0 8px 32px rgba(31,78,121,0.2);
+  border: 1px solid rgba(31,78,121,0.1);
+}
+body.night .planet-tooltip {
+  background: rgba(8,18,42,0.98);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.55);
+  border: 1px solid rgba(126,184,232,0.16);
+}
+.planet:hover .planet-tooltip { opacity: 1; transform: translateX(-50%) scale(1); }
+.tooltip-title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 7px;
+}
+body.day   .tooltip-title { color: #1F4E79; }
+body.night .tooltip-title { color: #7eb8e8; }
+.tooltip-tags { display: flex; flex-wrap: wrap; gap: 5px; }
+.tooltip-tag {
+  font-size: 10.5px;
+  padding: 3px 8px;
+  border-radius: 20px;
+  font-weight: 500;
+}
+body.day   .tooltip-tag { background: rgba(31,78,121,0.08); color: #1F4E79; }
+body.night .tooltip-tag { background: rgba(126,184,232,0.1); color: #7eb8e8; }
+
+.solar-star {
+  position: absolute;
+  border-radius: 50%;
+  background: #fff;
+  pointer-events: none;
+  animation: starTwinkle var(--tw, 3s) ease-in-out infinite;
+}
+@keyframes starTwinkle {
+  0%,100% { opacity: 0.2; transform: scale(1); }
+  50%      { opacity: 1;   transform: scale(1.4); }
+}
+
+@media (max-width: 700px) {
+  .solar-wrap { display: none; }
+  .skills-grid-fallback { display: grid !important; }
+}
+.skills-grid-fallback { display: none; }
+</style>
+
+<div class="solar-wrap" id="solarSystem">
+
+  <div class="solar-star" style="width:2px;height:2px;top:8%;left:12%;--tw:2.1s;animation-delay:0.3s;"></div>
+  <div class="solar-star" style="width:3px;height:3px;top:15%;left:78%;--tw:3.2s;animation-delay:0.8s;"></div>
+  <div class="solar-star" style="width:2px;height:2px;top:70%;left:6%;--tw:2.5s;animation-delay:1.1s;"></div>
+  <div class="solar-star" style="width:2px;height:2px;top:85%;left:88%;--tw:1.8s;animation-delay:0.5s;"></div>
+  <div class="solar-star" style="width:3px;height:3px;top:25%;left:92%;--tw:2.8s;animation-delay:1.4s;"></div>
+  <div class="solar-star" style="width:2px;height:2px;top:92%;left:40%;--tw:3.5s;animation-delay:0.2s;"></div>
+  <div class="solar-star" style="width:2px;height:2px;top:5%;left:55%;--tw:2.2s;animation-delay:0.9s;"></div>
+
+  <div class="orbit-ring" id="ring1"></div>
+  <div class="orbit-ring" id="ring2"></div>
+  <div class="orbit-ring" id="ring3"></div>
+
+  <div class="solar-sun-stage">
+    <div class="solar-sun"></div>
+    <div id="sunCat"></div>
+  </div>
+
+  <div class="planet" id="p1">
+    <div class="planet-dot"><i class="fa-solid fa-display"></i></div>
+    <div class="planet-label">Frontend</div>
+    <div class="planet-tooltip">
+      <div class="tooltip-title">Frontend</div>
+      <div class="tooltip-tags"><span class="tooltip-tag">React.js</span><span class="tooltip-tag">HTML</span><span class="tooltip-tag">CSS</span><span class="tooltip-tag">Framer Motion</span></div>
+    </div>
+  </div>
+
+  <div class="planet" id="p2">
+    <div class="planet-dot"><i class="fa-solid fa-server"></i></div>
+    <div class="planet-label">Backend</div>
+    <div class="planet-tooltip">
+      <div class="tooltip-title">Backend</div>
+      <div class="tooltip-tags"><span class="tooltip-tag">Node.js</span><span class="tooltip-tag">Express.js</span><span class="tooltip-tag">JWT</span><span class="tooltip-tag">Socket.io</span><span class="tooltip-tag">Mongoose</span></div>
+    </div>
+  </div>
+
+  <div class="planet" id="p3">
+    <div class="planet-dot"><i class="fa-solid fa-code"></i></div>
+    <div class="planet-label">Languages</div>
+    <div class="planet-tooltip">
+      <div class="tooltip-title">Languages</div>
+      <div class="tooltip-tags"><span class="tooltip-tag">Java</span><span class="tooltip-tag">JavaScript</span><span class="tooltip-tag">Python</span><span class="tooltip-tag">SQL</span></div>
+    </div>
+  </div>
+
+  <div class="planet" id="p4">
+    <div class="planet-dot"><i class="fa-solid fa-database"></i></div>
+    <div class="planet-label">Databases</div>
+    <div class="planet-tooltip">
+      <div class="tooltip-title">Databases</div>
+      <div class="tooltip-tags"><span class="tooltip-tag">MongoDB</span><span class="tooltip-tag">MySQL</span><span class="tooltip-tag">PostgreSQL</span></div>
+    </div>
+  </div>
+
+  <div class="planet" id="p5">
+    <div class="planet-dot"><i class="fa-solid fa-shield-halved"></i></div>
+    <div class="planet-label">Security</div>
+    <div class="planet-tooltip">
+      <div class="tooltip-title">Security</div>
+      <div class="tooltip-tags"><span class="tooltip-tag">CSRF</span><span class="tooltip-tag">Input Validation</span><span class="tooltip-tag">Session Auth</span><span class="tooltip-tag">RBAC</span><span class="tooltip-tag">Audit Logs</span></div>
+    </div>
+  </div>
+
+  <div class="planet" id="p6">
+    <div class="planet-dot"><i class="fa-solid fa-cloud"></i></div>
+    <div class="planet-label">Cloud</div>
+    <div class="planet-tooltip">
+      <div class="tooltip-title">Cloud &amp; Deploy</div>
+      <div class="tooltip-tags"><span class="tooltip-tag">AWS</span><span class="tooltip-tag">Vercel</span><span class="tooltip-tag">Render</span><span class="tooltip-tag">CI/CD</span></div>
+    </div>
+  </div>
+
+  <div class="planet" id="p7">
+    <div class="planet-dot"><i class="fa-solid fa-screwdriver-wrench"></i></div>
+    <div class="planet-label">Tools</div>
+    <div class="planet-tooltip">
+      <div class="tooltip-title">Tools &amp; Platforms</div>
+      <div class="tooltip-tags"><span class="tooltip-tag">Git</span><span class="tooltip-tag">GitHub</span><span class="tooltip-tag">Postman</span><span class="tooltip-tag">VS Code</span><span class="tooltip-tag">Linux</span><span class="tooltip-tag">OCR</span></div>
+    </div>
+  </div>
+
 </div>
-<div class="skill-tags">
-<span class="skill-tag">React.js</span>
-<span class="skill-tag">HTML</span>
-<span class="skill-tag">CSS</span>
-<span class="skill-tag">Framer Motion</span>
+
+<!-- mobile fallback grid -->
+<div class="skills-grid skills-grid-fallback">
+<div class="skill-card"><div class="skill-card-header"><div class="skill-card-title"><i class="fa-solid fa-display"></i> Frontend</div></div><div class="skill-tags"><span class="skill-tag">React.js</span><span class="skill-tag">HTML</span><span class="skill-tag">CSS</span><span class="skill-tag">Framer Motion</span></div></div>
+<div class="skill-card"><div class="skill-card-header"><div class="skill-card-title"><i class="fa-solid fa-server"></i> Backend</div></div><div class="skill-tags"><span class="skill-tag">Node.js</span><span class="skill-tag">Express.js</span><span class="skill-tag">JWT</span><span class="skill-tag">Socket.io</span><span class="skill-tag">Mongoose</span></div></div>
+<div class="skill-card"><div class="skill-card-header"><div class="skill-card-title"><i class="fa-solid fa-code"></i> Languages</div></div><div class="skill-tags"><span class="skill-tag">Java</span><span class="skill-tag">JavaScript</span><span class="skill-tag">Python</span><span class="skill-tag">SQL</span></div></div>
+<div class="skill-card"><div class="skill-card-header"><div class="skill-card-title"><i class="fa-solid fa-database"></i> Databases</div></div><div class="skill-tags"><span class="skill-tag">MongoDB</span><span class="skill-tag">MySQL</span><span class="skill-tag">PostgreSQL</span></div></div>
+<div class="skill-card"><div class="skill-card-header"><div class="skill-card-title"><i class="fa-solid fa-shield-halved"></i> Security</div></div><div class="skill-tags"><span class="skill-tag">CSRF</span><span class="skill-tag">Input Validation</span><span class="skill-tag">RBAC</span><span class="skill-tag">Audit Logs</span></div></div>
+<div class="skill-card"><div class="skill-card-header"><div class="skill-card-title"><i class="fa-solid fa-cloud"></i> Cloud</div></div><div class="skill-tags"><span class="skill-tag">AWS</span><span class="skill-tag">Vercel</span><span class="skill-tag">Render</span><span class="skill-tag">CI/CD</span></div></div>
+<div class="skill-card"><div class="skill-card-header"><div class="skill-card-title"><i class="fa-solid fa-screwdriver-wrench"></i> Tools</div></div><div class="skill-tags"><span class="skill-tag">Git</span><span class="skill-tag">GitHub</span><span class="skill-tag">Postman</span><span class="skill-tag">VS Code</span><span class="skill-tag">Linux</span><span class="skill-tag">OCR</span></div></div>
 </div>
-</div>
-<div class="skill-card reveal">
-<div class="skill-card-header">
-<div class="skill-card-title"><i class="fa-solid fa-server"></i> Backend</div>
-<div class="skill-count">5</div>
-</div>
-<div class="skill-tags">
-<span class="skill-tag">Node.js</span>
-<span class="skill-tag">Express.js</span>
-<span class="skill-tag">JWT</span>
-<span class="skill-tag">Socket.io</span>
-<span class="skill-tag">Mongoose</span>
-</div>
-</div>
-<div class="skill-card reveal">
-<div class="skill-card-header">
-<div class="skill-card-title"><i class="fa-solid fa-code"></i> Programming Languages</div>
-<div class="skill-count">4</div>
-</div>
-<div class="skill-tags">
-<span class="skill-tag">Java</span>
-<span class="skill-tag">JavaScript</span>
-<span class="skill-tag">Python</span>
-<span class="skill-tag">SQL</span>
-</div>
-</div>
-<div class="skill-card reveal">
-<div class="skill-card-header">
-<div class="skill-card-title"><i class="fa-solid fa-database"></i> Databases</div>
-<div class="skill-count">3</div>
-</div>
-<div class="skill-tags">
-<span class="skill-tag">MongoDB</span>
-<span class="skill-tag">MySQL</span>
-<span class="skill-tag">PostgreSQL</span>
-</div>
-</div>
-<div class="skill-card reveal">
-<div class="skill-card-header">
-<div class="skill-card-title"><i class="fa-solid fa-shield-halved"></i> Security</div>
-<div class="skill-count">5</div>
-</div>
-<div class="skill-tags">
-<span class="skill-tag">CSRF Protection</span>
-<span class="skill-tag">Input Validation</span>
-<span class="skill-tag">Session Based Auth</span>
-<span class="skill-tag">Role Based Access</span>
-<span class="skill-tag">Audit Trail Logging</span>
-</div>
-</div>
-<div class="skill-card reveal">
-<div class="skill-card-header">
-<div class="skill-card-title"><i class="fa-solid fa-cloud"></i> Cloud &amp; Deployment</div>
-<div class="skill-count">4</div>
-</div>
-<div class="skill-tags">
-<span class="skill-tag">AWS</span>
-<span class="skill-tag">Vercel</span>
-<span class="skill-tag">Render</span>
-<span class="skill-tag">CI/CD</span>
-</div>
-</div>
-<div class="skill-card reveal">
-<div class="skill-card-header">
-<div class="skill-card-title"><i class="fa-solid fa-screwdriver-wrench"></i> Tools &amp; Platforms</div>
-<div class="skill-count">6</div>
-</div>
-<div class="skill-tags">
-<span class="skill-tag">Git</span>
-<span class="skill-tag">GitHub</span>
-<span class="skill-tag">Postman</span>
-<span class="skill-tag">VS Code</span>
-<span class="skill-tag">Linux</span>
-<span class="skill-tag">OCR</span>
-</div>
-</div>
-</div>
+
+<script>
+(function() {
+  function initSunCat() {
+    var el = document.getElementById('sunCat');
+    if (window.lottie && el) {
+      lottie.loadAnimation({
+        container: el,
+        renderer: 'svg',
+        loop: true,
+        autoplay: true,
+        animationData: {"v":"5.6.9","fr":30,"ip":0,"op":123,"w":500,"h":500,"nm":"Comp 1","ddd":0,"assets":[],"layers":[{"ddd":0,"ind":1,"ty":4,"nm":"nose","sr":1,"ks":{"o":{"a":0,"k":100,"ix":11},"r":{"a":0,"k":0,"ix":10},"p":{"a":0,"k":[183.951,343.04,0],"ix":2},"a":{"a":0,"k":[-66.049,93.04,0],"ix":1},"s":{"a":0,"k":[100,100,100],"ix":6}},"ao":0,"shapes":[{"ty":"gr","it":[{"ty":"gr","it":[{"ind":0,"ty":"sh","ix":1,"ks":{"a":1,"k":[{"i":{"x":0.667,"y":1},"o":{"x":0.333,"y":0},"t":0,"s":[{"i":[[-1.34,-5.745],[0,0],[-1.499,1.688],[-1.762,-1.325],[-0.386,-0.33],[-1.8,1.32],[0,0],[7.41,0.404]],"o":[[0,0],[1.983,1.08],[1.084,-1.221],[0.524,0.394],[1.696,1.451],[0,0],[0,0],[-7.41,-0.404]],"v":[[-75.84,87.149],[-74.81,87.71],[-68.88,86.638],[-64.543,85.936],[-63.182,87.022],[-57.22,87.239],[-56.053,86.383],[-63.106,82.138]],"c":true}]},{"i":{"x":0.667,"y":1},"o":{"x":0.333,"y":0},"t":29,"s":[{"i":[[-1.34,-5.745],[0,0],[-1.499,1.688],[-1.762,-1.325],[-0.386,-0.33],[-1.8,1.32],[0,0],[7.41,0.404]],"o":[[0,0],[1.983,1.08],[1.084,-1.221],[0.524,0.394],[1.696,1.451],[0,0],[0,0],[-7.41,-0.404]],"v":[[-75.84,87.149],[-74.81,87.71],[-68.63,89.076],[-64.293,88.374],[-62.932,89.46],[-57.22,87.239],[-56.053,86.383],[-63.106,82.138]],"c":true}]},{"i":{"x":0.667,"y":1},"o":{"x":0.333,"y":0},"t":59,"s":[{"i":[[-1.34,-5.745],[0,0],[-1.499,1.688],[-1.762,-1.325],[-0.386,-0.33],[-1.8,1.32],[0,0],[7.41,0.404]],"o":[[0,0],[1.983,1.08],[1.084,-1.221],[0.524,0.394],[1.696,1.451],[0,0],[0,0],[-7.41,-0.404]],"v":[[-75.84,87.149],[-74.81,87.71],[-68.88,86.638],[-64.543,85.936],[-63.182,87.022],[-57.22,87.239],[-56.053,86.383],[-63.106,82.138]],"c":true}]},{"i":{"x":0.667,"y":1},"o":{"x":0.333,"y":0},"t":88,"s":[{"i":[[-1.34,-5.745],[0,0],[-1.499,1.688],[-1.762,-1.325],[-0.386,-0.33],[-1.8,1.32],[0,0],[7.41,0.404]],"o":[[0,0],[1.983,1.08],[1.084,-1.221],[0.524,0.394],[1.696,1.451],[0,0],[0,0],[-7.41,-0.404]],"v":[[-75.84,87.149],[-74.81,87.71],[-68.63,89.076],[-64.293,88.374],[-62.932,89.46],[-57.22,87.239],[-56.053,86.383],[-63.106,82.138]],"c":true}]},{"t":123,"s":[{"i":[[-1.34,-5.745],[0,0],[-1.499,1.688],[-1.762,-1.325],[-0.386,-0.33],[-1.8,1.32],[0,0],[7.41,0.404]],"o":[[0,0],[1.983,1.08],[1.084,-1.221],[0.524,0.394],[1.696,1.451],[0,0],[0,0],[-7.41,-0.404]],"v":[[-75.84,87.149],[-74.81,87.71],[-68.88,86.638],[-64.543,85.936],[-63.182,87.022],[-57.22,87.239],[-56.053,86.383],[-63.106,82.138]],"c":true}]}],"ix":2},"nm":"Path 1","mn":"ADBE Vector Shape - Group","hd":false},{"ty":"fl","c":{"a":0,"k":[0.905882358551,0.905882358551,0.878431379795,1],"ix":4},"o":{"a":0,"k":100,"ix":5},"r":1,"bm":0,"nm":"Fill 1","mn":"ADBE Vector Graphic - Fill","hd":false},{"ty":"tr","p":{"a":0,"k":[0,0],"ix":2},"a":{"a":0,"k":[0,0],"ix":1},"s":{"a":0,"k":[100,100],"ix":3},"r":{"a":0,"k":0,"ix":6},"o":{"a":0,"k":50,"ix":7},"sk":{"a":0,"k":0,"ix":4},"sa":{"a":0,"k":0,"ix":5},"nm":"Transform"}],"nm":"Group 2","np":2,"cix":2,"bm":0,"ix":1,"mn":"ADBE Vector Group","hd":false},{"ty":"gr","it":[{"ind":0,"ty":"sh","ix":1,"ks":{"a":0,"k":{"i":[[-3.013,-0.97],[-2.224,0.524],[-0.105,2.755],[10,0],[0.045,-2.782]],"o":[[2.175,0.7],[3.126,-0.737],[0.06,-1.569],[-10,0],[-0.045,2.744]],"v":[[-69.678,93.795],[-62.966,94.058],[-55.56,87.069],[-65.5,81.5],[-76.545,86.282]],"c":true},"ix":2},"nm":"Path 1","mn":"ADBE Vector Shape - Group","hd":false},{"ty":"fl","c":{"a":0,"k":[0.219607858097,0.215686289469,0.215686289469,1],"ix":4},"o":{"a":0,"k":100,"ix":5},"r":1,"bm":0,"nm":"Fill 1","mn":"ADBE Vector Graphic - Fill","hd":false},{"ty":"st","c":{"a":0,"k":[0.505882382393,0.537254929543,0.568627476692,1],"ix":3},"o":{"a":0,"k":100,"ix":4},"w":{"a":0,"k":1,"ix":5},"lc":1,"lj":1,"ml":10,"bm":0,"nm":"Stroke 1","mn":"ADBE Vector Graphic - Stroke","hd":false},{"ty":"tr","p":{"a":0,"k":[0,0],"ix":2},"a":{"a":0,"k":[0,0],"ix":1},"s":{"a":0,"k":[100,100],"ix":3},"r":{"a":0,"k":0,"ix":6},"o":{"a":0,"k":100,"ix":7},"sk":{"a":0,"k":0,"ix":4},"sa":{"a":0,"k":0,"ix":5},"nm":"Transform"}],"nm":"Group 1","np":3,"cix":2,"bm":0,"ix":2,"mn":"ADBE Vector Group","hd":false},{"ty":"tr","p":{"a":1,"k":[{"i":{"x":0.833,"y":0.833},"o":{"x":0.167,"y":0.167},"t":0,"s":[0,0],"to":[0,0],"ti":[0,0]},{"i":{"x":0.833,"y":0.833},"o":{"x":0.167,"y":0.167},"t":29,"s":[0,6],"to":[0,0],"ti":[0,0]},{"i":{"x":0.833,"y":0.833},"o":{"x":0.167,"y":0.167},"t":59,"s":[0,0],"to":[0,0],"ti":[0,0]},{"i":{"x":0.833,"y":0.833},"o":{"x":0.167,"y":0.167},"t":90,"s":[0,6],"to":[0,0],"ti":[0,0]},{"t":123,"s":[0,0]}],"ix":2},"a":{"a":0,"k":[0,0],"ix":1},"s":{"a":0,"k":[100,100],"ix":3},"r":{"a":0,"k":0,"ix":6},"o":{"a":0,"k":100,"ix":7},"sk":{"a":0,"k":0,"ix":4},"sa":{"a":0,"k":0,"ix":5},"nm":"Transform"}],"nm":"Group 2","np":2,"cix":2,"bm":0,"ix":1,"mn":"ADBE Vector Group","hd":false},{"ty":"gr","it":[{"ind":0,"ty":"sh","ix":1,"ks":{"a":0,"k":{"i":[[0,0],[0,0]],"o":[[0,0],[0,0]],"v":[[-65.473,96.829],[-65.918,104.581]],"c":false},"ix":2},"nm":"Path 1","mn":"ADBE Vector Shape - Group","hd":false},{"ty":"st","c":{"a":0,"k":[0.505882382393,0.537254929543,0.568627476692,1],"ix":3},"o":{"a":0,"k":100,"ix":4},"w":{"a":0,"k":1,"ix":5},"lc":1,"lj":1,"ml":10,"bm":0,"nm":"Stroke 1","mn":"ADBE Vector Graphic - Stroke","hd":false},{"ty":"tr","p":{"a":0,"k":[0,0],"ix":2},"a":{"a":0,"k":[0,0],"ix":1},"s":{"a":0,"k":[100,100],"ix":3},"r":{"a":0,"k":0,"ix":6},"o":{"a":0,"k":100,"ix":7},"sk":{"a":0,"k":0,"ix":4},"sa":{"a":0,"k":0,"ix":5},"nm":"Transform"}],"nm":"Group 1","np":2,"cix":2,"bm":0,"ix":2,"mn":"ADBE Vector Group","hd":false}],"ip":0,"op":150,"st":0,"bm":0},{"ddd":0,"ind":2,"ty":4,"nm":"Left eye","sr":1,"ks":{"o":{"a":0,"k":100,"ix":11},"r":{"a":0,"k":-1,"ix":10},"p":{"a":1,"k":[{"i":{"x":0.667,"y":1},"o":{"x":0.333,"y":0},"t":0,"s":[167.211,306.747,0],"to":[0,0.667,0],"ti":[0,0,0]},{"i":{"x":0.667,"y":1},"o":{"x":0.333,"y":0},"t":29,"s":[167.211,310.747,0],"to":[0,0,0],"ti":[0,0,0]},{"i":{"x":0.667,"y":1},"o":{"x":0.333,"y":0},"t":59,"s":[167.211,306.747,0],"to":[0,0,0],"ti":[0,0,0]},{"i":{"x":0.667,"y":1},"o":{"x":0.333,"y":0},"t":91,"s":[167.211,310.747,0],"to":[0,0,0],"ti":[0,0.667,0]},{"t":123,"s":[167.211,306.747,0]}],"ix":2},"a":{"a":0,"k":[-81.539,56.997,0],"ix":1},"s":{"a":0,"k":[100,100,100],"ix":6}},"ao":0,"shapes":[{"ty":"gr","it":[{"ind":0,"ty":"sh","ix":1,"ks":{"a":1,"k":[{"i":{"x":0.667,"y":1},"o":{"x":0.333,"y":0},"t":0,"s":[{"i":[[0.97,-5.21],[0,0],[-0.24,0.87],[-4.27,-1.14]],"o":[[0,0],[0.06,-0.84],[1.5,-5.6],[4,1.08]],"v":[[-73.642,58],[-89.772,57.51],[-89.342,54.93],[-78.902,46.85]],"c":true}]},{"i":{"x":0.667,"y":1},"o":{"x":0.333,"y":0},"t":29,"s":[{"i":[[0.97,-5.21],[0,0],[-0.24,0.87],[-4.27,-1.14]],"o":[[0,0],[0.06,-0.84],[1.5,-5.6],[4,1.08]],"v":[[-73.732,59.561],[-89.862,59.071],[-89.342,54.93],[-78.902,46.85]],"c":true}]},{"i":{"x":0.667,"y":1},"o":{"x":0.333,"y":0},"t":59,"s":[{"i":[[0.97,-5.21],[0,0],[-0.24,0.87],[-4.27,-1.14]],"o":[[0,0],[0.06,-0.84],[1.5,-5.6],[4,1.08]],"v":[[-73.642,58],[-89.772,57.51],[-89.342,54.93],[-78.902,46.85]],"c":true}]},{"i":{"x":0.667,"y":1},"o":{"x":0.333,"y":0},"t":88,"s":[{"i":[[0.97,-5.21],[0,0],[-0.24,0.87],[-4.27,-1.14]],"o":[[0,0],[0.06,-0.84],[1.5,-5.6],[4,1.08]],"v":[[-73.732,59.561],[-89.862,59.071],[-89.342,54.93],[-78.902,46.85]],"c":true}]},{"t":123,"s":[{"i":[[0.97,-5.21],[0,0],[-0.24,0.87],[-4.27,-1.14]],"o":[[0,0],[0.06,-0.84],[1.5,-5.6],[4,1.08]],"v":[[-73.642,58],[-89.772,57.51],[-89.342,54.93],[-78.902,46.85]],"c":true}]}],"ix":2},"nm":"Path 1","mn":"ADBE Vector Shape - Group","hd":false},{"ty":"st","c":{"a":0,"k":[0.505882382393,0.537254929543,0.568627476692,1],"ix":3},"o":{"a":0,"k":100,"ix":4},"w":{"a":0,"k":1,"ix":5},"lc":1,"lj":1,"ml":10,"bm":0,"nm":"Stroke 1","mn":"ADBE Vector Graphic - Stroke","hd":false},{"ty":"fl","c":{"a":0,"k":[0.854901969433,0.843137264252,0.772549033165,1],"ix":4},"o":{"a":0,"k":100,"ix":5},"r":1,"bm":0,"nm":"Fill 1","mn":"ADBE Vector Graphic - Fill","hd":false},{"ty":"tr","p":{"a":0,"k":[0,0],"ix":2},"a":{"a":0,"k":[0,0],"ix":1},"s":{"a":0,"k":[100,100],"ix":3},"r":{"a":0,"k":0,"ix":6},"o":{"a":0,"k":100,"ix":7},"sk":{"a":0,"k":0,"ix":4},"sa":{"a":0,"k":0,"ix":5},"nm":"Transform"}],"nm":"Group 1","np":3,"cix":2,"bm":0,"ix":1,"mn":"ADBE Vector Group","hd":false},{"ty":"gr","it":[{"d":1,"ty":"el","s":{"a":0,"k":[9.188,9.813],"ix":2},"p":{"a":0,"k":[0,0],"ix":3},"nm":"Ellipse Path 1","mn":"ADBE Vector Shape - Ellipse","hd":false},{"ty":"fl","c":{"a":0,"k":[0.220392204733,0.214515087651,0.214515087651,1],"ix":4},"o":{"a":0,"k":100,"ix":5},"r":1,"bm":0,"nm":"Fill 1","mn":"ADBE Vector Graphic - Fill","hd":false},{"ty":"tr","p":{"a":1,"k":[{"i":{"x":0.667,"y":1},"o":{"x":0.333,"y":0},"t":60,"s":[-81.691,55.945],"to":[0.333,0],"ti":[0,0]},{"i":{"x":0.667,"y":1},"o":{"x":0.333,"y":0},"t":65,"s":[-79.691,55.945],"to":[0,0],"ti":[0.333,0]},{"t":70,"s":[-81.691,55.945]}],"ix":2},"a":{"a":0,"k":[0,0],"ix":1},"s":{"a":0,"k":[100,100],"ix":3},"r":{"a":0,"k":0,"ix":6},"o":{"a":0,"k":100,"ix":7},"sk":{"a":0,"k":0,"ix":4},"sa":{"a":0,"k":0,"ix":5},"nm":"Transform"}],"nm":"Ellipse 1","np":3,"cix":2,"bm":0,"ix":2,"mn":"ADBE Vector Group","hd":false},{"ty":"gr","it":[{"ind":0,"ty":"sh","ix":1,"ks":{"a":0,"k":{"i":[[1.498,-5.602],[4.268,1.141],[-1.498,5.602],[-4.268,-1.141]],"o":[[-1.498,5.602],[-4.268,-1.141],[1.498,-5.602],[4.268,1.141]],"v":[[-73.772,59.067],[-84.213,67.144],[-89.228,54.933],[-78.787,46.856]],"c":true},"ix":2},"nm":"Path 1","mn":"ADBE Vector Shape - Group","hd":false},{"ty":"fl","c":{"a":0,"k":[1,1,1,1],"ix":4},"o":{"a":0,"k":100,"ix":5},"r":1,"bm":0,"nm":"Fill 1","mn":"ADBE Vector Graphic - Fill","hd":false},{"ty":"st","c":{"a":0,"k":[0.505882382393,0.537254929543,0.568627476692,1],"ix":3},"o":{"a":0,"k":100,"ix":4},"w":{"a":0,"k":1,"ix":5},"lc":1,"lj":1,"ml":10,"bm":0,"nm":"Stroke 1","mn":"ADBE Vector Graphic - Stroke","hd":false},{"ty":"tr","p":{"a":0,"k":[0,0],"ix":2},"a":{"a":0,"k":[0,0],"ix":1},"s":{"a":0,"k":[100,100],"ix":3},"r":{"a":0,"k":0,"ix":6},"o":{"a":0,"k":100,"ix":7},"sk":{"a":0,"k":0,"ix":4},"sa":{"a":0,"k":0,"ix":5},"nm":"Transform"}],"nm":"Group 2","np":3,"cix":2,"bm":0,"ix":3,"mn":"ADBE Vector Group","hd":false}],"ip":0,"op":150,"st":0,"bm":0},{"ddd":0,"ind":3,"ty":4,"nm":"Right-eye","sr":1,"ks":{"o":{"a":0,"k":100,"ix":11},"r":{"a":0,"k":1,"ix":10},"p":{"a":1,"k":[{"i":{"x":0.667,"y":1},"o":{"x":0.333,"y":0},"t":0,"s":[203.461,306.997,0],"to":[0,0.667,0],"ti":[0,0,0]},{"i":{"x":0.667,"y":1},"o":{"x":0.333,"y":0},"t":29,"s":[203.461,310.997,0],"to":[0,0,0],"ti":[0,0,0]},{"i":{"x":0.667,"y":1},"o":{"x":0.333,"y":0},"t":59,"s":[203.461,306.997,0],"to":[0,0,0],"ti":[0,0,0]},{"i":{"x":0.667,"y":1},"o":{"x":0.333,"y":0},"t":91,"s":[203.461,310.997,0],"to":[0,0,0],"ti":[0,0.667,0]},{"t":123,"s":[203.461,306.997,0]}],"ix":2},"a":{"a":0,"k":[-81.539,56.997,0],"ix":1},"s":{"a":0,"k":[-100,100,100],"ix":6}},"ao":0,"shapes":[{"ty":"gr","it":[{"ind":0,"ty":"sh","ix":1,"ks":{"a":1,"k":[{"i":{"x":0.667,"y":1},"o":{"x":0.333,"y":0},"t":0,"s":[{"i":[[0.97,-5.21],[0,0],[-0.24,0.87],[-4.27,-1.14]],"o":[[0,0],[0.06,-0.84],[1.5,-5.6],[4,1.08]],"v":[[-73.642,58],[-89.772,57.51],[-89.342,54.93],[-78.902,46.85]],"c":true}]},{"i":{"x":0.667,"y":1},"o":{"x":0.333,"y":0},"t":29,"s":[{"i":[[0.97,-5.21],[0,0],[-0.24,0.87],[-4.27,-1.14]],"o":[[0,0],[0.06,-0.84],[1.5,-5.6],[4,1.08]],"v":[[-73.732,59.561],[-89.862,59.071],[-89.342,54.93],[-78.902,46.85]],"c":true}]},{"i":{"x":0.667,"y":1},"o":{"x":0.333,"y":0},"t":59,"s":[{"i":[[0.97,-5.21],[0,0],[-0.24,0.87],[-4.27,-1.14]],"o":[[0,0],[0.06,-0.84],[1.5,-5.6],[4,1.08]],"v":[[-73.642,58],[-89.772,57.51],[-89.342,54.93],[-78.902,46.85]],"c":true}]},{"i":{"x":0.667,"y":1},"o":{"x":0.333,"y":0},"t":88,"s":[{"i":[[0.97,-5.21],[0,0],[-0.24,0.87],[-4.27,-1.14]],"o":[[0,0],[0.06,-0.84],[1.5,-5.6],[4,1.08]],"v":[[-73.732,59.561],[-89.862,59.071],[-89.342,54.93],[-78.902,46.85]],"c":true}]},{"t":123,"s":[{"i":[[0.97,-5.21],[0,0],[-0.24,0.87],[-4.27,-1.14]],"o":[[0,0],[0.06,-0.84],[1.5,-5.6],[4,1.08]],"v":[[-73.642,58],[-89.772,57.51],[-89.342,54.93],[-78.902,46.85]],"c":true}]}],"ix":2},"nm":"Path 1","mn":"ADBE Vector Shape - Group","hd":false},{"ty":"st","c":{"a":0,"k":[0.505882382393,0.537254929543,0.568627476692,1],"ix":3},"o":{"a":0,"k":100,"ix":4},"w":{"a":0,"k":1,"ix":5},"lc":1,"lj":1,"ml":10,"bm":0,"nm":"Stroke 1","mn":"ADBE Vector Graphic - Stroke","hd":false},{"ty":"fl","c":{"a":0,"k":[0.854901969433,0.843137264252,0.772549033165,1],"ix":4},"o":{"a":0,"k":100,"ix":5},"r":1,"bm":0,"nm":"Fill 1","mn":"ADBE Vector Graphic - Fill","hd":false},{"ty":"tr","p":{"a":0,"k":[0,0],"ix":2},"a":{"a":0,"k":[0,0],"ix":1},"s":{"a":0,"k":[100,100],"ix":3},"r":{"a":0,"k":0,"ix":6},"o":{"a":0,"k":100,"ix":7},"sk":{"a":0,"k":0,"ix":4},"sa":{"a":0,"k":0,"ix":5},"nm":"Transform"}],"nm":"Group 1","np":3,"cix":2,"bm":0,"ix":1,"mn":"ADBE Vector Group","hd":false},{"ty":"gr","it":[{"d":1,"ty":"el","s":{"a":0,"k":[9.188,9.813],"ix":2},"p":{"a":0,"k":[0,0],"ix":3},"nm":"Ellipse Path 1","mn":"ADBE Vector Shape - Ellipse","hd":false},{"ty":"fl","c":{"a":0,"k":[0.220392204733,0.214515087651,0.214515087651,1],"ix":4},"o":{"a":0,"k":100,"ix":5},"r":1,"bm":0,"nm":"Fill 1","mn":"ADBE Vector Graphic - Fill","hd":false},{"ty":"tr","p":{"a":1,"k":[{"i":{"x":0.667,"y":1},"o":{"x":0.333,"y":0},"t":60,"s":[-81.691,55.945],"to":[-0.333,0],"ti":[0,0]},{"i":{"x":0.667,"y":1},"o":{"x":0.333,"y":0},"t":64,"s":[-83.691,55.945],"to":[0,0],"ti":[-0.333,0]},{"t":70,"s":[-81.691,55.945]}],"ix":2},"a":{"a":0,"k":[0,0],"ix":1},"s":{"a":0,"k":[100,100],"ix":3},"r":{"a":0,"k":0,"ix":6},"o":{"a":0,"k":100,"ix":7},"sk":{"a":0,"k":0,"ix":4},"sa":{"a":0,"k":0,"ix":5},"nm":"Transform"}],"nm":"Ellipse 1","np":3,"cix":2,"bm":0,"ix":2,"mn":"ADBE Vector Group","hd":false},{"ty":"gr","it":[{"ind":0,"ty":"sh","ix":1,"ks":{"a":0,"k":{"i":[[1.498,-5.602],[4.268,1.141],[-1.498,5.602],[-4.268,-1.141]],"o":[[-1.498,5.602],[-4.268,-1.141],[1.498,-5.602],[4.268,1.141]],"v":[[-73.772,59.067],[-84.213,67.144],[-89.228,54.933],[-78.787,46.856]],"c":true},"ix":2},"nm":"Path 1","mn":"ADBE Vector Shape - Group","hd":false},{"ty":"fl","c":{"a":0,"k":[1,1,1,1],"ix":4},"o":{"a":0,"k":100,"ix":5},"r":1,"bm":0,"nm":"Fill 1","mn":"ADBE Vector Graphic - Fill","hd":false},{"ty":"st","c":{"a":0,"k":[0.505882382393,0.537254929543,0.568627476692,1],"ix":3},"o":{"a":0,"k":100,"ix":4},"w":{"a":0,"k":1,"ix":5},"lc":1,"lj":1,"ml":10,"bm":0,"nm":"Stroke 1","mn":"ADBE Vector Graphic - Stroke","hd":false},{"ty":"tr","p":{"a":0,"k":[0,0],"ix":2},"a":{"a":0,"k":[0,0],"ix":1},"s":{"a":0,"k":[100,100],"ix":3},"r":{"a":0,"k":0,"ix":6},"o":{"a":0,"k":100,"ix":7},"sk":{"a":0,"k":0,"ix":4},"sa":{"a":0,"k":0,"ix":5},"nm":"Transform"}],"nm":"Group 2","np":3,"cix":2,"bm":0,"ix":3,"mn":"ADBE Vector Group","hd":false}],"ip":0,"op":150,"st":0,"bm":0},{"ddd":0,"ind":4,"ty":4,"nm":"Face","sr":1,"ks":{"o":{"a":0,"k":100,"ix":11},"r":{"a":0,"k":0,"ix":10},"p":{"a":0,"k":[192.428,306.825,0],"ix":2},"a":{"a":0,"k":[-57.572,56.825,0],"ix":1},"s":{"a":0,"k":[100,100,100],"ix":6}},"ao":0,"shapes":[{"ty":"gr","it":[{"ty":"gr","it":[{"ty":"gr","it":[{"ind":0,"ty":"sh","ix":1,"ks":{"a":0,"k":{"i":[[0,0],[11.384,-0.301]],"o":[[-7.903,-8.122],[0,0]],"v":[[14.988,99.517],[-14.159,88.308]],"c":false},"ix":2},"nm":"Path 1","mn":"ADBE Vector Shape - Group","hd":false},{"ty":"st","c":{"a":0,"k":[0.505882382393,0.537254929543,0.568627476692,1],"ix":3},"o":{"a":0,"k":100,"ix":4},"w":{"a":0,"k":1,"ix":5},"lc":1,"lj":1,"ml":10,"bm":0,"nm":"Stroke 1","mn":"ADBE Vector Graphic - Stroke","hd":false},{"ty":"tr","p":{"a":0,"k":[0,0],"ix":2},"a":{"a":0,"k":[0,0],"ix":1},"s":{"a":0,"k":[100,100],"ix":3},"r":{"a":0,"k":0,"ix":6},"o":{"a":0,"k":100,"ix":7},"sk":{"a":0,"k":0,"ix":4},"sa":{"a":0,"k":0,"ix":5},"nm":"Transform"}],"nm":"Group 1","np":2,"cix":2,"bm":0,"ix":1,"mn":"ADBE Vector Group","hd":false},{"ty":"gr","it":[{"ind":0,"ty":"sh","ix":1,"ks":{"a":0,"k":{"i":[[0,0],[14.402,-2.561]],"o":[[-11.593,-8.804],[0,0]],"v":[[25.5,90.266],[-13.666,81.605]],"c":false},"ix":2},"nm":"Path 1","mn":"ADBE Vector Shape - Group","hd":false},{"ty":"st","c":{"a":0,"k":[0.505882382393,0.537254929543,0.568627476692,1],"ix":3},"o":{"a":0,"k":100,"ix":4},"w":{"a":0,"k":1,"ix":5},"lc":1,"lj":1,"ml":10,"bm":0,"nm":"Stroke 1","mn":"ADBE Vector Graphic - Stroke","hd":false},{"ty":"tr","p":{"a":0,"k":[0,0],"ix":2},"a":{"a":0,"k":[0,0],"ix":1},"s":{"a":0,"k":[100,100],"ix":3},"r":{"a":0,"k":0,"ix":6},"o":{"a":0,"k":100,"ix":7},"sk":{"a":0,"k":0,"ix":4},"sa":{"a":0,"k":0,"ix":5},"nm":"Transform"}],"nm":"Group 2","np":2,"cix":2,"bm":0,"ix":2,"mn":"ADBE Vector Group","hd":false},{"ty":"gr","it":[{"ind":0,"ty":"sh","ix":1,"ks":{"a":0,"k":{"i":[[0,0],[13.052,-6.605]],"o":[[-13.639,-5.088],[0,0]],"v":[[24.356,75.5],[-15.644,78.5]],"c":false},"ix":2},"nm":"Path 1","mn":"ADBE Vector Shape - Group","hd":false},{"ty":"st","c":{"a":0,"k":[0.505882382393,0.537254929543,0.568627476692,1],"ix":3},"o":{"a":0,"k":100,"ix":4},"w":{"a":0,"k":1,"ix":5},"lc":1,"lj":1,"ml":10,"bm":0,"nm":"Stroke 1","mn":"ADBE Vector Graphic - Stroke","hd":false},{"ty":"tr","p":{"a":0,"k":[0,0],"ix":2},"a":{"a":0,"k":[0,0],"ix":1},"s":{"a":0,"k":[100,100],"ix":3},"r":{"a":0,"k":0,"ix":6},"o":{"a":0,"k":100,"ix":7},"sk":{"a":0,"k":0,"ix":4},"sa":{"a":0,"k":0,"ix":5},"nm":"Transform"}],"nm":"Group 3","np":2,"cix":2,"bm":0,"ix":3,"mn":"ADBE Vector Group","hd":false},{"ty":"tr","p":{"a":0,"k":[4.928,85.986],"ix":2},"a":{"a":0,"k":[4.928,85.986],"ix":1},"s":{"a":0,"k":[100,100],"ix":3},"r":{"a":0,"k":0,"ix":6},"o":{"a":0,"k":100,"ix":7},"sk":{"a":0,"k":0,"ix":4},"sa":{"a":0,"k":0,"ix":5},"nm":"Transform"}],"nm":"right-mustache","np":3,"cix":2,"bm":0,"ix":1,"mn":"ADBE Vector Group","hd":false},{"ty":"gr","it":[{"ty":"gr","it":[{"ind":0,"ty":"sh","ix":1,"ks":{"a":1,"k":[{"i":{"x":0.667,"y":1},"o":{"x":0.333,"y":0},"t":-0.823,"s":[{"i":[[0,0],[-11.384,-0.301]],"o":[[7.903,-8.122],[0,0]],"v":[[-130.132,100.517],[-100.985,89.308]],"c":false}]},{"t":121.607421875,"s":[{"i":[[0,0],[-11.384,-0.301]],"o":[[7.903,-8.122],[0,0]],"v":[[-130.132,100.517],[-100.985,89.308]],"c":false}]}],"ix":2},"nm":"Path 1","mn":"ADBE Vector Shape - Group","hd":false},{"ty":"st","c":{"a":0,"k":[0.505882382393,0.537254929543,0.568627476692,1],"ix":3},"o":{"a":0,"k":100,"ix":4},"w":{"a":0,"k":1,"ix":5},"lc":1,"lj":1,"ml":10,"bm":0,"nm":"Stroke 1","mn":"ADBE Vector Graphic - Stroke","hd":false},{"ty":"tr","p":{"a":0,"k":[0,0],"ix":2},"a":{"a":0,"k":[0,0],"ix":1},"s":{"a":0,"k":[100,100],"ix":3},"r":{"a":0,"k":0,"ix":6},"o":{"a":0,"k":100,"ix":7},"sk":{"a":0,"k":0,"ix":4},"sa":{"a":0,"k":0,"ix":5},"nm":"Transform"}],"nm":"Group 4","np":2,"cix":2,"bm":0,"ix":1,"mn":"ADBE Vector Group","hd":false},{"ty":"gr","it":[{"ind":0,"ty":"sh","ix":1,"ks":{"a":1,"k":[{"i":{"x":0.667,"y":1},"o":{"x":0.333,"y":0},"t":-0.823,"s":[{"i":[[0,0],[-14.402,-2.561]],"o":[[11.593,-8.804],[0,0]],"v":[[-140.644,91.266],[-101.478,82.605]],"c":false}]},{"t":121.607421875,"s":[{"i":[[0,0],[-14.402,-2.561]],"o":[[11.593,-8.804],[0,0]],"v":[[-140.644,91.266],[-101.478,82.605]],"c":false}]}],"ix":2},"nm":"Path 1","mn":"ADBE Vector Shape - Group","hd":false},{"ty":"st","c":{"a":0,"k":[0.505882382393,0.537254929543,0.568627476692,1],"ix":3},"o":{"a":0,"k":100,"ix":4},"w":{"a":0,"k":1,"ix":5},"lc":1,"lj":1,"ml":10,"bm":0,"nm":"Stroke 1","mn":"ADBE Vector Graphic - Stroke","hd":false},{"ty":"tr","p":{"a":0,"k":[0,0],"ix":2},"a":{"a":0,"k":[0,0],"ix":1},"s":{"a":0,"k":[100,100],"ix":3},"r":{"a":0,"k":0,"ix":6},"o":{"a":0,"k":100,"ix":7},"sk":{"a":0,"k":0,"ix":4},"sa":{"a":0,"k":0,"ix":5},"nm":"Transform"}],"nm":"Group 5","np":2,"cix":2,"bm":0,"ix":2,"mn":"ADBE Vector Group","hd":false},{"ty":"gr","it":[{"ind":0,"ty":"sh","ix":1,"ks":{"a":1,"k":[{"i":{"x":0.667,"y":1},"o":{"x":0.333,"y":0},"t":-0.823,"s":[{"i":[[0,0],[-13.052,-6.605]],"o":[[13.639,-5.088],[0,0]],"v":[[-139.5,76.5],[-99.5,79.5]],"c":false}]},{"t":121.607421875,"s":[{"i":[[0,0],[-13.052,-6.605]],"o":[[13.639,-5.088],[0,0]],"v":[[-139.5,76.5],[-99.5,79.5]],"c":false}]}],"ix":2},"nm":"Path 1","mn":"ADBE Vector Shape - Group","hd":false},{"ty":"st","c":{"a":0,"k":[0.505882382393,0.537254929543,0.568627476692,1],"ix":3},"o":{"a":0,"k":100,"ix":4},"w":{"a":0,"k":1,"ix":5},"lc":1,"lj":1,"ml":10,"bm":0,"nm":"Stroke 1","mn":"ADBE Vector Graphic - Stroke","hd":false},{"ty":"tr","p":{"a":0,"k":[0,0],"ix":2},"a":{"a":0,"k":[0,0],"ix":1},"s":{"a":0,"k":[100,100],"ix":3},"r":{"a":0,"k":0,"ix":6},"o":{"a":0,"k":100,"ix":7},"sk":{"a":0,"k":0,"ix":4},"sa":{"a":0,"k":0,"ix":5},"nm":"Transform"}],"nm":"Group 6","np":2,"cix":2,"bm":0,"ix":3,"mn":"ADBE Vector Group","hd":false},{"ty":"tr","p":{"a":0,"k":[-120.072,86.986],"ix":2},"a":{"a":0,"k":[-120.072,86.986],"ix":1},"s":{"a":0,"k":[100,100],"ix":3},"r":{"a":0,"k":0,"ix":6},"o":{"a":0,"k":100,"ix":7},"sk":{"a":0,"k":0,"ix":4},"sa":{"a":0,"k":0,"ix":5},"nm":"Transform"}],"nm":"left-mustache","np":3,"cix":2,"bm":0,"ix":2,"mn":"ADBE Vector Group","hd":false},{"ty":"tr","p":{"a":1,"k":[{"i":{"x":0.667,"y":1},"o":{"x":0.333,"y":0},"t":0,"s":[-57.572,86.486],"to":[0,0.667],"ti":[0,0]},{"i":{"x":0.667,"y":1},"o":{"x":0.333,"y":0},"t":29,"s":[-57.572,90.486],"to":[0,0],"ti":[0,0]},{"i":{"x":0.667,"y":1},"o":{"x":0.333,"y":0},"t":59,"s":[-57.572,86.486],"to":[0,0],"ti":[0,0]},{"i":{"x":0.667,"y":1},"o":{"x":0.333,"y":0},"t":91,"s":[-57.572,90.486],"to":[0,0],"ti":[0,0.667]},{"t":122,"s":[-57.572,86.486]}],"ix":2},"a":{"a":0,"k":[-57.572,86.486],"ix":1},"s":{"a":0,"k":[100,100],"ix":3},"r":{"a":0,"k":0,"ix":6},"o":{"a":0,"k":100,"ix":7},"sk":{"a":0,"k":0,"ix":4},"sa":{"a":0,"k":0,"ix":5},"nm":"Transform"}],"nm":"Group 11","np":2,"cix":2,"bm":0,"ix":1,"mn":"ADBE Vector Group","hd":false},{"ty":"gr","it":[{"ind":0,"ty":"sh","ix":1,"ks":{"a":1,"k":[{"i":{"x":0.667,"y":1},"o":{"x":0.333,"y":0},"t":-0.823,"s":[{"i":[[6.018,-3.655],[0,0],[0.443,-11.282],[5.38,3.689]],"o":[[0,0],[5.067,9.435],[-1.335,-9.332],[-4.641,-1.009]],"v":[[-22.106,23.851],[-3.596,9.298],[2.021,40.816],[-5.468,17.681]],"c":true}]},{"i":{"x":0.667,"y":1},"o":{"x":0.333,"y":0},"t":29,"s":[{"i":[[6.018,-3.655],[0,0],[0.443,-11.282],[5.38,3.689]],"o":[[0,0],[5.067,9.435],[-1.335,-9.332],[-4.641,-1.009]],"v":[[-22.106,27.351],[-3.596,12.798],[2.021,44.316],[-6.468,24.431]],"c":true}]},{"i":{"x":0.667,"y":1},"o":{"x":0.333,"y":0},"t":58.822,"s":[{"i":[[6.018,-3.655],[0,0],[0.443,-11.282],[5.38,3.689]],"o":[[0,0],[5.067,9.435],[-1.335,-9.332],[-4.641,-1.009]],"v":[[-22.106,23.851],[-3.596,9.298],[2.021,40.816],[-5.468,17.681]],"c":true}]},{"i":{"x":0.667,"y":1},"o":{"x":0.333,"y":0},"t":90,"s":[{"i":[[6.018,-3.655],[0,0],[0.443,-11.282],[5.38,3.689]],"o":[[0,0],[5.067,9.435],[-1.335,-9.332],[-4.641,-1.009]],"v":[[-22.106,27.351],[-3.596,12.798],[2.021,44.316],[-6.968,24.931]],"c":true}]},{"t":121.607421875,"s":[{"i":[[6.018,-3.655],[0,0],[0.443,-11.282],[5.38,3.689]],"o":[[0,0],[5.067,9.435],[-1.335,-9.332],[-4.641,-1.009]],"v":[[-22.106,23.851],[-3.596,9.298],[2.021,40.816],[-5.468,17.681]],"c":true}]}],"ix":2},"nm":"Path 1","mn":"ADBE Vector Shape - Group","hd":false},{"ty":"fl","c":{"a":0,"k":[0.905882358551,0.905882358551,0.878431379795,1],"ix":4},"o":{"a":0,"k":100,"ix":5},"r":1,"bm":0,"nm":"Fill 1","mn":"ADBE Vector Graphic - Fill","hd":false},{"ty":"tr","p":{"a":0,"k":[0,0],"ix":2},"a":{"a":0,"k":[0,0],"ix":1},"s":{"a":0,"k":[100,100],"ix":3},"r":{"a":0,"k":0,"ix":6},"o":{"a":0,"k":100,"ix":7},"sk":{"a":0,"k":0,"ix":4},"sa":{"a":0,"k":0,"ix":5},"nm":"Transform"}],"nm":"Group 7","np":2,"cix":2,"bm":0,"ix":2,"mn":"ADBE Vector Group","hd":false},{"ty":"gr","it":[{"ind":0,"ty":"sh","ix":1,"ks":{"a":1,"k":[{"i":{"x":0.667,"y":1},"o":{"x":0.333,"y":0},"t":-0.823,"s":[{"i":[[-24.511,-8.34],[18.278,-2.031],[0,0],[4.931,2.183],[-2.366,-7.69]],"o":[[0,0],[-10.497,1.166],[-4.938,-7.316],[7.172,6.475],[0,0]],"v":[[-36.106,23.809],[-66.049,19.536],[-83.58,24.213],[-98.383,9.106],[-83.766,30.277]],"c":true}]},{"i":{"x":0.667,"y":1},"o":{"x":0.333,"y":0},"t":29,"s":[{"i":[[-24.511,-8.34],[18.278,-2.031],[0,0],[4.931,2.183],[-2.366,-7.69]],"o":[[0,0],[-10.497,1.166],[-4.938,-7.316],[7.172,6.475],[0,0]],"v":[[-36.106,27.309],[-66.049,23.036],[-83.58,27.713],[-98.383,12.606],[-83.766,33.777]],"c":true}]},{"i":{"x":0.667,"y":1},"o":{"x":0.333,"y":0},"t":58.822,"s":[{"i":[[-24.511,-8.34],[18.278,-2.031],[0,0],[4.931,2.183],[-2.366,-7.69]],"o":[[0,0],[-10.497,1.166],[-4.938,-7.316],[7.172,6.475],[0,0]],"v":[[-36.106,23.809],[-66.049,19.536],[-83.58,24.213],[-98.383,9.106],[-83.766,30.277]],"c":true}]},{"i":{"x":0.667,"y":1},"o":{"x":0.333,"y":0},"t":90.215,"s":[{"i":[[-24.511,-8.34],[18.278,-2.031],[0,0],[4.931,2.183],[-2.366,-7.69]],"o":[[0,0],[-10.497,1.166],[-4.938,-7.316],[7.172,6.475],[0,0]],"v":[[-36.106,27.309],[-66.049,23.036],[-83.58,27.713],[-98.383,12.606],[-83.766,33.777]],"c":true}]},{"t":121.607421875,"s":[{"i":[[-24.511,-8.34],[18.278,-2.031],[0,0],[4.931,2.183],[-2.366,-7.69]],"o":[[0,0],[-10.497,1.166],[-4.938,-7.316],[7.172,6.475],[0,0]],"v":[[-36.106,23.809],[-66.049,19.536],[-83.58,24.213],[-98.383,9.106],[-83.766,30.277]],"c":true}]}],"ix":2},"nm":"Path 1","mn":"ADBE Vector Shape - Group","hd":false},{"ty":"fl","c":{"a":0,"k":[0.905882358551,0.905882358551,0.878431379795,1],"ix":4},"o":{"a":0,"k":100,"ix":5},"r":1,"bm":0,"nm":"Fill 1","mn":"ADBE Vector Graphic - Fill","hd":false},{"ty":"tr","p":{"a":0,"k":[0,0],"ix":2},"a":{"a":0,"k":[0,0],"ix":1},"s":{"a":0,"k":[100,100],"ix":3},"r":{"a":0,"k":0,"ix":6},"o":{"a":0,"k":100,"ix":7},"sk":{"a":0,"k":0,"ix":4},"sa":{"a":0,"k":0,"ix":5},"nm":"Transform"}],"nm":"Group 8","np":2,"cix":2,"bm":0,"ix":3,"mn":"ADBE Vector Group","hd":false},{"ty":"gr","it":[{"ind":0,"ty":"sh","ix":1,"ks":{"a":1,"k":[{"i":{"x":0.667,"y":1},"o":{"x":0.333,"y":0},"t":-0.823,"s":[{"i":[[0,0],[-4.392,9.159],[-0.766,-20.383],[-11.316,-20.287],[0,0],[-11,22]],"o":[[-3.187,-8.025],[0,0],[0,0],[9.681,17.357],[0,0],[-14.278,-10.699]],"v":[[-100.985,35],[-98.383,9.106],[-106,35.691],[-118.11,84.138],[-76.573,103.028],[-100.985,68.535]],"c":true}]},{"i":{"x":0.667,"y":1},"o":{"x":0.333,"y":0},"t":29,"s":[{"i":[[0,0],[-4.392,9.159],[-0.766,-20.383],[-11.316,-20.287],[0,0],[-11,22]],"o":[[-3.187,-8.025],[0,0],[0,0],[9.681,17.357],[0,0],[-14.278,-10.699]],"v":[[-100.985,38.5],[-98.383,12.606],[-106,39.191],[-118.11,84.138],[-76.573,103.028],[-100.985,68.535]],"c":true}]},{"i":{"x":0.667,"y":1},"o":{"x":0.333,"y":0},"t":58.822,"s":[{"i":[[0,0],[-4.392,9.159],[-0.766,-20.383],[-11.316,-20.287],[0,0],[-11,22]],"o":[[-3.187,-8.025],[0,0],[0,0],[9.681,17.357],[0,0],[-14.278,-10.699]],"v":[[-100.985,35],[-98.383,9.106],[-106,35.691],[-118.11,84.138],[-76.573,103.028],[-100.985,68.535]],"c":true}]},{"i":{"x":0.667,"y":1},"o":{"x":0.333,"y":0},"t":90.215,"s":[{"i":[[0,0],[-4.392,9.159],[-0.766,-20.383],[-11.316,-20.287],[0,0],[-11,22]],"o":[[-3.187,-8.025],[0,0],[0,0],[9.681,17.357],[0,0],[-14.278,-10.699]],"v":[[-100.985,38.5],[-98.383,12.606],[-106,39.191],[-118.11,84.138],[-76.573,103.028],[-100.985,68.535]],"c":true}]},{"t":121.607421875,"s":[{"i":[[0,0],[-4.392,9.159],[-0.766,-20.383],[-11.316,-20.287],[0,0],[-11,22]],"o":[[-3.187,-8.025],[0,0],[0,0],[9.681,17.357],[0,0],[-14.278,-10.699]],"v":[[-100.985,35],[-98.383,9.106],[-106,35.691],[-118.11,84.138],[-76.573,103.028],[-100.985,68.535]],"c":true}]}],"ix":2},"nm":"Path 1","mn":"ADBE Vector Shape - Group","hd":false},{"ty":"fl","c":{"a":0,"k":[0.905882358551,0.905882358551,0.878431379795,1],"ix":4},"o":{"a":0,"k":100,"ix":5},"r":1,"bm":0,"nm":"Fill 1","mn":"ADBE Vector Graphic - Fill","hd":false},{"ty":"tr","p":{"a":0,"k":[0,0],"ix":2},"a":{"a":0,"k":[0,0],"ix":1},"s":{"a":0,"k":[100,100],"ix":3},"r":{"a":0,"k":0,"ix":6},"o":{"a":0,"k":100,"ix":7},"sk":{"a":0,"k":0,"ix":4},"sa":{"a":0,"k":0,"ix":5},"nm":"Transform"}],"nm":"Group 9","np":2,"cix":2,"bm":0,"ix":4,"mn":"ADBE Vector Group","hd":false},{"ty":"gr","it":[{"ind":0,"ty":"sh","ix":1,"ks":{"a":1,"k":[{"i":{"x":0.667,"y":1},"o":{"x":0.333,"y":0},"t":-0.823,"s":[{"i":[[0,0],[16.955,-6.492],[6.053,2.702],[-0.083,-10.687],[-24,-20],[-14,18],[0,0],[4.846,8.619],[0,0]],"o":[[-14.806,-8.12],[-4.738,-6.638],[-6.767,6.485],[0,0],[15,17],[22,-24],[0.358,-12.363],[0,0],[0,0]],"v":[[-35.5,23.5],[-83.5,23.5],[-98.5,8.5],[-106.5,35.5],[-112.5,91.5],[5.5,92.5],[2.5,40.5],[-3.5,8.5],[-22.5,23.5]],"c":false}]},{"i":{"x":0.667,"y":1},"o":{"x":0.333,"y":0},"t":29,"s":[{"i":[[0,0],[16.955,-6.492],[6.053,2.702],[-0.083,-10.687],[-24,-20],[-14,18],[0,0],[4.846,8.619],[0,0]],"o":[[-14.806,-8.12],[-4.738,-6.638],[-6.767,6.485],[0,0],[15,17],[22,-24],[0.358,-12.363],[0,0],[0,0]],"v":[[-35.5,27],[-83.5,27],[-98.5,12],[-106.5,39],[-112.5,91.5],[5.5,92.5],[2.5,44],[-3.5,12],[-22.5,27]],"c":false}]},{"i":{"x":0.667,"y":1},"o":{"x":0.333,"y":0},"t":58.822,"s":[{"i":[[0,0],[16.955,-6.492],[6.053,2.702],[-0.083,-10.687],[-24,-20],[-14,18],[0,0],[4.846,8.619],[0,0]],"o":[[-14.806,-8.12],[-4.738,-6.638],[-6.767,6.485],[0,0],[15,17],[22,-24],[0.358,-12.363],[0,0],[0,0]],"v":[[-35.5,23.5],[-83.5,23.5],[-98.5,8.5],[-106.5,35.5],[-112.5,91.5],[5.5,92.5],[2.5,40.5],[-3.5,8.5],[-22.5,23.5]],"c":false}]},{"i":{"x":0.667,"y":1},"o":{"x":0.333,"y":0},"t":90.215,"s":[{"i":[[0,0],[16.955,-6.492],[6.053,2.702],[-0.083,-10.687],[-24,-20],[-14,18],[0,0],[4.846,8.619],[0,0]],"o":[[-14.806,-8.12],[-4.738,-6.638],[-6.767,6.485],[0,0],[15,17],[22,-24],[0.358,-12.363],[0,0],[0,0]],"v":[[-35.5,27],[-83.5,27],[-98.5,12],[-106.5,39],[-112.5,91.5],[5.5,92.5],[2.5,44],[-3.5,12],[-22.5,27]],"c":false}]},{"t":121.607421875,"s":[{"i":[[0,0],[16.955,-6.492],[6.053,2.702],[-0.083,-10.687],[-24,-20],[-14,18],[0,0],[4.846,8.619],[0,0]],"o":[[-14.806,-8.12],[-4.738,-6.638],[-6.767,6.485],[0,0],[15,17],[22,-24],[0.358,-12.363],[0,0],[0,0]],"v":[[-35.5,23.5],[-83.5,23.5],[-98.5,8.5],[-106.5,35.5],[-112.5,91.5],[5.5,92.5],[2.5,40.5],[-3.5,8.5],[-22.5,23.5]],"c":false}]}],"ix":2},"nm":"Path 1","mn":"ADBE Vector Shape - Group","hd":false},{"ty":"st","c":{"a":0,"k":[0.505882382393,0.537254929543,0.568627476692,1],"ix":3},"o":{"a":0,"k":100,"ix":4},"w":{"a":0,"k":1,"ix":5},"lc":1,"lj":1,"ml":10,"bm":0,"nm":"Stroke 1","mn":"ADBE Vector Graphic - Stroke","hd":false},{"ty":"fl","c":{"a":0,"k":[0.854901969433,0.843137264252,0.772549033165,1],"ix":4},"o":{"a":0,"k":100,"ix":5},"r":1,"bm":0,"nm":"Fill 1","mn":"ADBE Vector Graphic - Fill","hd":false},{"ty":"tr","p":{"a":0,"k":[0,0],"ix":2},"a":{"a":0,"k":[0,0],"ix":1},"s":{"a":0,"k":[100,100],"ix":3},"r":{"a":0,"k":0,"ix":6},"o":{"a":0,"k":100,"ix":7},"sk":{"a":0,"k":0,"ix":4},"sa":{"a":0,"k":0,"ix":5},"nm":"Transform"}],"nm":"Group 10","np":3,"cix":2,"bm":0,"ix":5,"mn":"ADBE Vector Group","hd":false}],"ip":0,"op":150,"st":0,"bm":0},{"ddd":0,"ind":5,"ty":4,"nm":"right-hand","sr":1,"ks":{"o":{"a":0,"k":100,"ix":11},"r":{"a":0,"k":0,"ix":10},"p":{"a":0,"k":[291.426,336.228,0],"ix":2},"a":{"a":0,"k":[43.426,87.978,0],"ix":1},"s":{"a":0,"k":[100,100,100],"ix":6}},"ao":0,"shapes":[{"ty":"gr","it":[{"ind":0,"ty":"sh","ix":1,"ks":{"a":0,"k":{"i":[[24,4.468],[-12.626,-6.557],[0,0]],"o":[[0,0],[9.83,5.105],[0,0]],"v":[[24.915,68.128],[52.043,80.64],[61.745,86.511]],"c":true},"ix":2},"nm":"Path 1","mn":"ADBE Vector Shape - Group","hd":false},{"ty":"fl","c":{"a":0,"k":[0.905882358551,0.905882358551,0.878431379795,1],"ix":4},"o":{"a":0,"k":100,"ix":5},"r":1,"bm":0,"nm":"Fill 1","mn":"ADBE Vector Graphic - Fill","hd":false},{"ty":"tr","p":{"a":0,"k":[0,0],"ix":2},"a":{"a":0,"k":[0,0],"ix":1},"s":{"a":0,"k":[100,100],"ix":3},"r":{"a":0,"k":0,"ix":6},"o":{"a":0,"k":100,"ix":7},"sk":{"a":0,"k":0,"ix":4},"sa":{"a":0,"k":0,"ix":5},"nm":"Transform"}],"nm":"Group 1","np":2,"cix":2,"bm":0,"ix":1,"mn":"ADBE Vector Group","hd":false},{"ty":"gr","it":[{"ind":0,"ty":"sh","ix":1,"ks":{"a":0,"k":{"i":[[0,0],[-10.298,-2.064],[-5.681,3.351],[8.059,4.947],[0.545,-4.691],[2.839,0.121]],"o":[[0,0],[10.298,2.064],[5.018,-2.96],[3.106,3.415],[-1.353,11.641],[0,0]],"v":[[14.257,91.209],[48.83,105.149],[69.808,105.53],[64.064,89.511],[67.979,99.517],[14.257,91.209]],"c":true},"ix":2},"nm":"Path 1","mn":"ADBE Vector Shape - Group","hd":false},{"ty":"fl","c":{"a":0,"k":[0.905882358551,0.905882358551,0.878431379795,1],"ix":4},"o":{"a":0,"k":100,"ix":5},"r":1,"bm":0,"nm":"Fill 1","mn":"ADBE Vector Graphic - Fill","hd":false},{"ty":"tr","p":{"a":0,"k":[0,0],"ix":2},"a":{"a":0,"k":[0,0],"ix":1},"s":{"a":0,"k":[100,100],"ix":3},"r":{"a":0,"k":0,"ix":6},"o":{"a":0,"k":100,"ix":7},"sk":{"a":0,"k":0,"ix":4},"sa":{"a":0,"k":0,"ix":5},"nm":"Transform"}],"nm":"Group 2","np":2,"cix":2,"bm":0,"ix":2,"mn":"ADBE Vector Group","hd":false},{"ty":"gr","it":[{"ind":0,"ty":"sh","ix":1,"ks":{"a":0,"k":{"i":[[0,0],[9.316,-14.464],[0,0]],"o":[[0,0],[-8.247,12.806],[0,0]],"v":[[24.749,68.535],[71.789,104.219],[14.024,91.648]],"c":false},"ix":2},"nm":"Path 1","mn":"ADBE Vector Shape - Group","hd":false},{"ty":"st","c":{"a":0,"k":[0.505882382393,0.537254929543,0.568627476692,1],"ix":3},"o":{"a":0,"k":100,"ix":4},"w":{"a":0,"k":1,"ix":5},"lc":1,"lj":1,"ml":10,"bm":0,"nm":"Stroke 1","mn":"ADBE Vector Graphic - Stroke","hd":false},{"ty":"fl","c":{"a":0,"k":[0.854901969433,0.843137264252,0.772549033165,1],"ix":4},"o":{"a":0,"k":100,"ix":5},"r":1,"bm":0,"nm":"Fill 1","mn":"ADBE Vector Graphic - Fill","hd":false},{"ty":"tr","p":{"a":0,"k":[0,0],"ix":2},"a":{"a":0,"k":[0,0],"ix":1},"s":{"a":0,"k":[100,100],"ix":3},"r":{"a":0,"k":0,"ix":6},"o":{"a":0,"k":100,"ix":7},"sk":{"a":0,"k":0,"ix":4},"sa":{"a":0,"k":0,"ix":5},"nm":"Transform"}],"nm":"Group 3","np":3,"cix":2,"bm":0,"ix":3,"mn":"ADBE Vector Group","hd":false}],"ip":0,"op":150,"st":0,"bm":0},{"ddd":0,"ind":6,"ty":4,"nm":"left-hand","sr":1,"ks":{"o":{"a":0,"k":100,"ix":11},"r":{"a":0,"k":0,"ix":10},"p":{"a":0,"k":[105.755,331.611,0],"ix":2},"a":{"a":0,"k":[-144.245,81.611,0],"ix":1},"s":{"a":0,"k":[100,100,100],"ix":6}},"ao":0,"shapes":[{"ty":"gr","it":[{"ind":0,"ty":"sh","ix":1,"ks":{"a":0,"k":{"i":[[0,0],[11.917,-6.708],[-1.567,-2.629],[-30.159,8.596],[0,0]],"o":[[0,0],[-11.755,6.617],[0.112,-4.644],[18.6,-5.301],[0,0]],"v":[[-121.806,65.146],[-163.787,79.415],[-172.59,93.133],[-144.245,74.957],[-122.404,69.34]],"c":true},"ix":2},"nm":"Path 1","mn":"ADBE Vector Shape - Group","hd":false},{"ty":"fl","c":{"a":0,"k":[0.905882358551,0.905882358551,0.878431379795,1],"ix":4},"o":{"a":0,"k":100,"ix":5},"r":1,"bm":0,"nm":"Fill 1","mn":"ADBE Vector Graphic - Fill","hd":false},{"ty":"tr","p":{"a":0,"k":[0,0],"ix":2},"a":{"a":0,"k":[0,0],"ix":1},"s":{"a":0,"k":[100,100],"ix":3},"r":{"a":0,"k":0,"ix":6},"o":{"a":0,"k":100,"ix":7},"sk":{"a":0,"k":0,"ix":4},"sa":{"a":0,"k":0,"ix":5},"nm":"Transform"}],"nm":"Group 1","np":2,"cix":2,"bm":0,"ix":1,"mn":"ADBE Vector Group","hd":false},{"ty":"gr","it":[{"ind":0,"ty":"sh","ix":1,"ks":{"a":0,"k":{"i":[[0,0],[-6.777,-15.814],[0,0]],"o":[[0,0],[6,14],[0,0]],"v":[[-121.176,65.146],[-173.5,92.5],[-114.449,89.722]],"c":false},"ix":2},"nm":"Path 1","mn":"ADBE Vector Shape - Group","hd":false},{"ty":"st","c":{"a":0,"k":[0.505882382393,0.537254929543,0.568627476692,1],"ix":3},"o":{"a":0,"k":100,"ix":4},"w":{"a":0,"k":1,"ix":5},"lc":1,"lj":1,"ml":10,"bm":0,"nm":"Stroke 1","mn":"ADBE Vector Graphic - Stroke","hd":false},{"ty":"fl","c":{"a":0,"k":[0.854901969433,0.843137264252,0.772549033165,1],"ix":4},"o":{"a":0,"k":100,"ix":5},"r":1,"bm":0,"nm":"Fill 1","mn":"ADBE Vector Graphic - Fill","hd":false},{"ty":"tr","p":{"a":0,"k":[0,0],"ix":2},"a":{"a":0,"k":[0,0],"ix":1},"s":{"a":0,"k":[100,100],"ix":3},"r":{"a":0,"k":0,"ix":6},"o":{"a":0,"k":100,"ix":7},"sk":{"a":0,"k":0,"ix":4},"sa":{"a":0,"k":0,"ix":5},"nm":"Transform"}],"nm":"Group 2","np":3,"cix":2,"bm":0,"ix":2,"mn":"ADBE Vector Group","hd":false}],"ip":0,"op":150,"st":0,"bm":0},{"ddd":0,"ind":7,"ty":4,"nm":"tail","sr":1,"ks":{"o":{"a":0,"k":100,"ix":11},"r":{"a":0,"k":0,"ix":10},"p":{"a":0,"k":[371.394,175.109,0],"ix":2},"a":{"a":0,"k":[121.394,-74.891,0],"ix":1},"s":{"a":0,"k":[100,100,100],"ix":6}},"ao":0,"shapes":[{"ty":"gr","it":[{"ind":0,"ty":"sh","ix":1,"ks":{"a":1,"k":[{"i":{"x":0.667,"y":1},"o":{"x":0.333,"y":0},"t":-0.823,"s":[{"i":[[0,0],[0,0],[8.649,65.298]],"o":[[55.388,33.257],[0,0],[-6.84,-56.617]],"v":[[116.08,-167.151],[115.014,18.043],[146.904,-119.787]],"c":true}]},{"i":{"x":0.667,"y":1},"o":{"x":0.333,"y":0},"t":29,"s":[{"i":[[0,0],[0,0],[46.596,70.287]],"o":[[110.92,54.651],[0,0],[-35.154,-44.213]],"v":[[49.08,-146.151],[115.014,18.043],[110.154,-111.787]],"c":true}]},{"i":{"x":0.667,"y":1},"o":{"x":0.333,"y":0},"t":58.822,"s":[{"i":[[0,0],[0,0],[8.649,65.298]],"o":[[55.388,33.257],[0,0],[-6.84,-56.617]],"v":[[116.08,-167.151],[115.014,18.043],[146.904,-119.787]],"c":true}]},{"i":{"x":0.667,"y":1},"o":{"x":0.333,"y":0},"t":90.215,"s":[{"i":[[0,0],[0,0],[46.596,70.287]],"o":[[110.92,54.651],[0,0],[-35.154,-44.213]],"v":[[49.08,-146.151],[115.014,18.043],[110.154,-111.787]],"c":true}]},{"t":123.1767578125,"s":[{"i":[[0,0],[0,0],[8.649,65.298]],"o":[[55.388,33.257],[0,0],[-6.84,-56.617]],"v":[[116.08,-167.151],[115.014,18.043],[146.904,-119.787]],"c":true}]}],"ix":2},"nm":"Path 1","mn":"ADBE Vector Shape - Group","hd":false},{"ty":"fl","c":{"a":0,"k":[0.905882358551,0.905882358551,0.878431379795,1],"ix":4},"o":{"a":0,"k":100,"ix":5},"r":1,"bm":0,"nm":"Fill 1","mn":"ADBE Vector Graphic - Fill","hd":false},{"ty":"tr","p":{"a":0,"k":[0,0],"ix":2},"a":{"a":0,"k":[0,0],"ix":1},"s":{"a":0,"k":[100,100],"ix":3},"r":{"a":0,"k":0,"ix":6},"o":{"a":0,"k":100,"ix":7},"sk":{"a":0,"k":0,"ix":4},"sa":{"a":0,"k":0,"ix":5},"nm":"Transform"}],"nm":"Group 1","np":2,"cix":2,"bm":0,"ix":1,"mn":"ADBE Vector Group","hd":false},{"ty":"gr","it":[{"ind":0,"ty":"sh","ix":1,"ks":{"a":1,"k":[{"i":{"x":0.667,"y":1},"o":{"x":0.333,"y":0},"t":-0.823,"s":[{"i":[[-39.73,88.541],[-28,9],[53.764,-101.15]],"o":[[35,-78],[32.383,-10.409],[-9.817,18.47]],"v":[[94.5,4.5],[115.5,-167.5],[115.5,18.5]],"c":false}]},{"i":{"x":0.667,"y":1},"o":{"x":0.333,"y":0},"t":29,"s":[{"i":[[-39.73,88.541],[-28,9],[53.764,-101.15]],"o":[[35,-78],[32.383,-10.409],[-9.817,18.47]],"v":[[94.5,4.5],[48.5,-146.5],[115.5,18.5]],"c":false}]},{"i":{"x":0.667,"y":1},"o":{"x":0.333,"y":0},"t":58.822,"s":[{"i":[[-39.73,88.541],[-28,9],[53.764,-101.15]],"o":[[35,-78],[32.383,-10.409],[-9.817,18.47]],"v":[[94.5,4.5],[115.5,-167.5],[115.5,18.5]],"c":false}]},{"i":{"x":0.667,"y":1},"o":{"x":0.333,"y":0},"t":90.215,"s":[{"i":[[-39.73,88.541],[-28,9],[53.764,-101.15]],"o":[[35,-78],[32.383,-10.409],[-9.817,18.47]],"v":[[94.5,4.5],[48.5,-146.5],[115.5,18.5]],"c":false}]},{"t":123.1767578125,"s":[{"i":[[-39.73,88.541],[-28,9],[53.764,-101.15]],"o":[[35,-78],[32.383,-10.409],[-9.817,18.47]],"v":[[94.5,4.5],[115.5,-167.5],[115.5,18.5]],"c":false}]}],"ix":2},"nm":"Path 1","mn":"ADBE Vector Shape - Group","hd":false},{"ty":"st","c":{"a":0,"k":[0.505882382393,0.537254929543,0.568627476692,1],"ix":3},"o":{"a":0,"k":100,"ix":4},"w":{"a":0,"k":1,"ix":5},"lc":1,"lj":1,"ml":10,"bm":0,"nm":"Stroke 1","mn":"ADBE Vector Graphic - Stroke","hd":false},{"ty":"fl","c":{"a":0,"k":[0.854901969433,0.843137264252,0.772549033165,1],"ix":4},"o":{"a":0,"k":100,"ix":5},"r":1,"bm":0,"nm":"Fill 1","mn":"ADBE Vector Graphic - Fill","hd":false},{"ty":"tr","p":{"a":0,"k":[0,0],"ix":2},"a":{"a":0,"k":[0,0],"ix":1},"s":{"a":0,"k":[100,100],"ix":3},"r":{"a":0,"k":0,"ix":6},"o":{"a":0,"k":100,"ix":7},"sk":{"a":0,"k":0,"ix":4},"sa":{"a":0,"k":0,"ix":5},"nm":"Transform"}],"nm":"Group 2","np":3,"cix":2,"bm":0,"ix":2,"mn":"ADBE Vector Group","hd":false}],"ip":0,"op":150,"st":0,"bm":0},{"ddd":0,"ind":8,"ty":4,"nm":"stomach","sr":1,"ks":{"o":{"a":0,"k":100,"ix":11},"r":{"a":0,"k":0,"ix":10},"p":{"a":0,"k":[303.33,290.816,0],"ix":2},"a":{"a":0,"k":[53.33,40.816,0],"ix":1},"s":{"a":0,"k":[100,100,100],"ix":6}},"ao":0,"shapes":[{"ty":"gr","it":[{"ind":0,"ty":"sh","ix":1,"ks":{"a":0,"k":{"i":[[0,0],[0,0],[-29.417,-34.402],[0,0],[9.957,4.213],[7.215,8.648]],"o":[[0,0],[0,0],[9.796,11.455],[0,0],[-12.383,-6],[-9.319,-11.17]],"v":[[117.085,16.681],[115.915,18.723],[155.213,55.809],[190.83,72.83],[174.149,66.915],[147.085,44.191]],"c":true},"ix":2},"nm":"Path 1","mn":"ADBE Vector Shape - Group","hd":false},{"ty":"fl","c":{"a":0,"k":[0.905882358551,0.905882358551,0.878431379795,1],"ix":4},"o":{"a":0,"k":100,"ix":5},"r":1,"bm":0,"nm":"Fill 1","mn":"ADBE Vector Graphic - Fill","hd":false},{"ty":"tr","p":{"a":0,"k":[0,0],"ix":2},"a":{"a":0,"k":[0,0],"ix":1},"s":{"a":0,"k":[100,100],"ix":3},"r":{"a":0,"k":0,"ix":6},"o":{"a":0,"k":100,"ix":7},"sk":{"a":0,"k":0,"ix":4},"sa":{"a":0,"k":0,"ix":5},"nm":"Transform"}],"nm":"Group 1","np":2,"cix":2,"bm":0,"ix":1,"mn":"ADBE Vector Group","hd":false},{"ty":"gr","it":[{"ind":0,"ty":"sh","ix":1,"ks":{"a":1,"k":[{"i":{"x":0.667,"y":1},"o":{"x":0.333,"y":0},"t":-0.823,"s":[{"i":[[0,0],[-9.511,-4.883],[-61.994,-16.241],[62.34,-1.362]],"o":[[10.372,-1.101],[29.331,-33.342],[0,0],[-50.01,4.646]],"v":[[-63.745,17.846],[-35.293,23.064],[95.367,1.122],[11,-16.83]],"c":true}]},{"i":{"x":0.667,"y":1},"o":{"x":0.333,"y":0},"t":29,"s":[{"i":[[0,0],[-9.511,-4.883],[-61.994,-16.241],[62.34,-1.362]],"o":[[10.372,-1.101],[29.331,-33.342],[0,0],[-52,2.33]],"v":[[-68.245,22.346],[-36.418,26.314],[95.367,1.122],[11,-12.33]],"c":true}]},{"i":{"x":0.667,"y":1},"o":{"x":0.333,"y":0},"t":58.822,"s":[{"i":[[0,0],[-9.511,-4.883],[-61.994,-16.241],[62.34,-1.362]],"o":[[10.372,-1.101],[29.331,-33.342],[0,0],[-50.01,4.646]],"v":[[-63.745,17.846],[-35.293,23.064],[95.367,1.122],[11,-16.83]],"c":true}]},{"i":{"x":0.667,"y":1},"o":{"x":0.333,"y":0},"t":90,"s":[{"i":[[0,0],[-9.511,-4.883],[-61.994,-16.241],[62.34,-1.362]],"o":[[10.372,-1.101],[29.331,-33.342],[0,0],[-52,2.33]],"v":[[-68.245,22.346],[-36.418,26.314],[95.367,1.122],[11,-12.33]],"c":true}]},{"t":123.1767578125,"s":[{"i":[[0,0],[-9.511,-4.883],[-61.994,-16.241],[62.34,-1.362]],"o":[[10.372,-1.101],[29.331,-33.342],[0,0],[-50.01,4.646]],"v":[[-63.745,17.846],[-35.293,23.064],[95.367,1.122],[11,-16.83]],"c":true}]}],"ix":2},"nm":"Path 1","mn":"ADBE Vector Shape - Group","hd":false},{"ty":"fl","c":{"a":0,"k":[0.905882358551,0.905882358551,0.878431379795,1],"ix":4},"o":{"a":0,"k":100,"ix":5},"r":1,"bm":0,"nm":"Fill 1","mn":"ADBE Vector Graphic - Fill","hd":false},{"ty":"tr","p":{"a":0,"k":[0,0],"ix":2},"a":{"a":0,"k":[0,0],"ix":1},"s":{"a":0,"k":[100,100],"ix":3},"r":{"a":0,"k":0,"ix":6},"o":{"a":0,"k":100,"ix":7},"sk":{"a":0,"k":0,"ix":4},"sa":{"a":0,"k":0,"ix":5},"nm":"Transform"}],"nm":"Group 2","np":2,"cix":2,"bm":0,"ix":2,"mn":"ADBE Vector Group","hd":false},{"ty":"gr","it":[{"ind":0,"ty":"sh","ix":1,"ks":{"a":1,"k":[{"i":{"x":0.667,"y":1},"o":{"x":0.333,"y":0},"t":-0.823,"s":[{"i":[[-20.458,4.531],[-40,-10],[4,3],[17.277,19.66],[0,0],[55,4],[0,0],[-108.538,17.575]],"o":[[20.458,-4.531],[40,10],[-4,-3],[-29,-33],[0,0],[-62.961,-4.579],[-35.036,52.86],[0,0]],"v":[[2.958,94.969],[166.5,87.5],[193.5,73.5],[153.5,50.5],[96.5,1.5],[28.5,-17.5],[-69.5,23.5],[2.958,94.969]],"c":false}]},{"i":{"x":0.667,"y":1},"o":{"x":0.333,"y":0},"t":29,"s":[{"i":[[-20.458,4.531],[-40,-10],[4,3],[17.277,19.66],[0,0],[55,4],[0,0],[-108.538,17.575]],"o":[[20.458,-4.531],[40,10],[-4,-3],[-29,-33],[0,0],[-62.961,-4.579],[-35.036,52.86],[0,0]],"v":[[2.958,91.219],[166.5,87.5],[193.5,73.5],[153.5,50.5],[96.5,1.5],[28.5,-13],[-69.5,23.5],[2.958,94.969]],"c":false}]},{"i":{"x":0.667,"y":1},"o":{"x":0.333,"y":0},"t":58.822,"s":[{"i":[[-20.458,4.531],[-40,-10],[4,3],[17.277,19.66],[0,0],[55,4],[0,0],[-108.538,17.575]],"o":[[20.458,-4.531],[40,10],[-4,-3],[-29,-33],[0,0],[-62.961,-4.579],[-35.036,52.86],[0,0]],"v":[[3.27,98.406],[166.5,87.5],[193.5,73.5],[153.5,50.5],[96.5,1.5],[28.5,-17.5],[-69.5,23.5],[3.27,98.406]],"c":false}]},{"i":{"x":0.667,"y":1},"o":{"x":0.333,"y":0},"t":90.215,"s":[{"i":[[-20.458,4.531],[-40,-10],[4,3],[17.277,19.66],[0,0],[55,4],[0,0],[-108.538,17.575]],"o":[[20.458,-4.531],[40,10],[-4,-3],[-29,-33],[0,0],[-62.961,-4.579],[-35.036,52.86],[0,0]],"v":[[2.958,94.969],[166.5,87.5],[193.5,73.5],[153.5,50.5],[96.5,1.5],[28.5,-13],[-69.5,23.5],[2.958,94.969]],"c":false}]},{"t":123.1767578125,"s":[{"i":[[-20.458,4.531],[-40,-10],[4,3],[17.277,19.66],[0,0],[55,4],[0,0],[-108.538,17.575]],"o":[[20.458,-4.531],[40,10],[-4,-3],[-29,-33],[0,0],[-62.961,-4.579],[-35.036,52.86],[0,0]],"v":[[2.958,94.969],[166.5,87.5],[193.5,73.5],[153.5,50.5],[96.5,1.5],[28.5,-17.5],[-69.5,23.5],[2.958,94.969]],"c":false}]}],"ix":2},"nm":"Path 1","mn":"ADBE Vector Shape - Group","hd":false},{"ty":"st","c":{"a":0,"k":[0.505882382393,0.537254929543,0.568627476692,1],"ix":3},"o":{"a":0,"k":100,"ix":4},"w":{"a":0,"k":1,"ix":5},"lc":1,"lj":1,"ml":10,"bm":0,"nm":"Stroke 1","mn":"ADBE Vector Graphic - Stroke","hd":false},{"ty":"fl","c":{"a":0,"k":[0.854901969433,0.843137264252,0.772549033165,1],"ix":4},"o":{"a":0,"k":100,"ix":5},"r":1,"bm":0,"nm":"Fill 1","mn":"ADBE Vector Graphic - Fill","hd":false},{"ty":"tr","p":{"a":0,"k":[0,0],"ix":2},"a":{"a":0,"k":[0,0],"ix":1},"s":{"a":0,"k":[100,100],"ix":3},"r":{"a":0,"k":0,"ix":6},"o":{"a":0,"k":100,"ix":7},"sk":{"a":0,"k":0,"ix":4},"sa":{"a":0,"k":0,"ix":5},"nm":"Transform"}],"nm":"Group 3","np":3,"cix":2,"bm":0,"ix":3,"mn":"ADBE Vector Group","hd":false}],"ip":0,"op":150,"st":0,"bm":0}],"markers":[]}
+      });
+    }
+  }
+  function waitForLottieSun(cb) {
+    if (window.lottie) { cb(); return; }
+    var t = setInterval(function() { if (window.lottie) { clearInterval(t); cb(); } }, 30);
+  }
+  waitForLottieSun(initSunCat);
+})();
+
+(function() {
+  function initSolar() {
+    var wrap = document.getElementById('solarSystem');
+    if (!wrap) return;
+
+    // Elliptical orbit definitions: [rx, ry, speed(deg/sec), startAngleDeg]
+    var orbits = [
+      { id: 'p1', rx: 280, ry: 110, speed: 9,  start: 20  },  // Frontend - ring1
+      { id: 'p2', rx: 460, ry: 175, speed: 6,  start: 200 }, // Backend - ring2
+      { id: 'p3', rx: 460, ry: 175, speed: 6,  start: 20  }, // Languages - ring2
+      { id: 'p4', rx: 640, ry: 235, speed: 4.2,start: 110 }, // Databases - ring3
+      { id: 'p5', rx: 640, ry: 235, speed: 4.2,start: 290 }, // Security - ring3
+      { id: 'p6', rx: 280, ry: 110, speed: 9,  start: 200 }, // Cloud - ring1
+      { id: 'p7', rx: 460, ry: 175, speed: 6,  start: 110 }  // Tools - ring2
+    ];
+
+    var rings = [
+      { el: document.getElementById('ring1'), rx: 280, ry: 110 },
+      { el: document.getElementById('ring2'), rx: 460, ry: 175 },
+      { el: document.getElementById('ring3'), rx: 640, ry: 235 }
+    ];
+    rings.forEach(function(r) {
+      if (r.el) {
+        r.el.style.width = (r.rx * 2) + 'px';
+        r.el.style.height = (r.ry * 2) + 'px';
+        r.el.style.marginLeft = (-r.rx) + 'px';
+        r.el.style.marginTop = (-r.ry) + 'px';
+      }
+    });
+
+    var els = orbits.map(function(o) {
+      return { cfg: o, el: document.getElementById(o.id), angle: o.start };
+    });
+
+    var lastTime = null;
+    function animate(ts) {
+      if (!lastTime) lastTime = ts;
+      var dt = (ts - lastTime) / 1000;
+      lastTime = ts;
+
+      els.forEach(function(item) {
+        if (!item.el) return;
+        item.angle += item.cfg.speed * dt;
+        if (item.angle >= 360) item.angle -= 360;
+        var rad = item.angle * Math.PI / 180;
+        var x = Math.cos(rad) * item.cfg.rx;
+        var y = Math.sin(rad) * item.cfg.ry;
+        item.el.style.left = 'calc(50% + ' + x.toFixed(1) + 'px)';
+        item.el.style.top  = 'calc(50% + ' + y.toFixed(1) + 'px)';
+        // depth effect: planets behind sun (y negative-ish / further back) slightly smaller + dimmer
+        var depth = (Math.sin(rad) + 1) / 2; // 0 (back) -> 1 (front)
+        var scale = 0.82 + depth * 0.28;
+        item.el.style.zIndex = Math.round(depth * 20) + 1;
+        item.el.style.opacity = (0.75 + depth * 0.25).toFixed(2);
+        item.el.querySelector('.planet-dot').style.transform = 'scale(' + scale.toFixed(2) + ')';
+      });
+
+      requestAnimationFrame(animate);
+    }
+    requestAnimationFrame(animate);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initSolar);
+  } else {
+    initSolar();
+  }
+})();
+</script>
+
 </div>
 </div>
 </section>
@@ -2376,6 +2784,66 @@ function handleSubmit() {
     console.error('EmailJS error:', err);
   });
 }
+</script>
+
+<script>
+// ── ABOUT PHOTO 3D TILT ──
+(function() {
+  var wrap = document.getElementById('tiltWrap');
+  var card = document.getElementById('tiltCard');
+  if (!wrap || !card) return;
+
+  var badge = wrap.querySelector('.about-badge');
+  var shine = card.querySelector('.photo-shine');
+  var maxTilt = 18; // noticeable / dramatic
+
+  function handleMove(e) {
+    var rect = card.getBoundingClientRect();
+    var x = e.clientX - rect.left;
+    var y = e.clientY - rect.top;
+    var px = (x / rect.width) - 0.5;  // -0.5 to 0.5
+    var py = (y / rect.height) - 0.5;
+
+    var rotateY = px * maxTilt * 2;
+    var rotateX = -py * maxTilt * 2;
+
+    card.style.transform =
+      'rotateX(' + rotateX.toFixed(2) + 'deg) rotateY(' + rotateY.toFixed(2) + 'deg) scale3d(1.04,1.04,1.04)';
+
+    if (badge) {
+      badge.style.transform =
+        'translate(' + (px * 14).toFixed(1) + 'px, ' + (py * 10).toFixed(1) + 'px) rotate(' + (px * 4).toFixed(1) + 'deg)';
+    }
+
+    if (shine) {
+      var shineX = 50 + px * 60;
+      var shineY = 50 + py * 60;
+      shine.style.backgroundPosition = shineX + '% ' + shineY + '%';
+    }
+  }
+
+  function handleEnter() {
+    card.classList.add('tilting');
+  }
+
+  function handleLeave() {
+    card.classList.remove('tilting');
+    card.style.transform = 'rotateX(0deg) rotateY(0deg) scale3d(1,1,1)';
+    if (badge) badge.style.transform = 'translate(0,0) rotate(0deg)';
+  }
+
+  wrap.addEventListener('mousemove', handleMove);
+  wrap.addEventListener('mouseenter', handleEnter);
+  wrap.addEventListener('mouseleave', handleLeave);
+
+  // touch support — gentle tilt based on touch position
+  wrap.addEventListener('touchstart', function() { card.classList.add('tilting'); }, { passive: true });
+  wrap.addEventListener('touchmove', function(e) {
+    var t = e.touches[0];
+    handleMove({ clientX: t.clientX, clientY: t.clientY });
+  }, { passive: true });
+  wrap.addEventListener('touchend', handleLeave);
+})();
 </script>
 
 <script>
