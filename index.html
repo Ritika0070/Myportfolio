@@ -2692,7 +2692,7 @@ body.night .tooltip-tag { background: rgba(126,184,232,0.1); color: #7eb8e8; }
       const lampY = 200 * scaleY;
 
       // offset relative to .hero-right container
-      const left = (wrapRect.left - heroRightRect.left) + lampX - 80;
+      const left = (wrapRect.left - heroRightRect.left) + lampX - (glow.offsetWidth / 2);
       const top  = (wrapRect.top  - heroRightRect.top)  + lampY;
 
       glow.style.left      = left + 'px';
