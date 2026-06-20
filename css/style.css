@@ -299,4 +299,16 @@ body.night .scroll-hint span { color: #7eb8e8; }
   .nav-links li:last-child { display: block; }
   .page-section { padding: 90px 24px 50px; }
   footer { padding: 24px; }
+
+  /* Fix: bottom cloud decoration was position:fixed and 260px tall,
+     so on short phone viewports it permanently overlapped page
+     content (e.g. the About Me bio text) no matter how far you
+     scrolled. Shrink it and push it behind content. */
+  #clouds-bottom { height: 110px; z-index: 1; }
+  #clouds-top { height: 130px; z-index: 1; }
+}
+
+@media (max-width: 480px) {
+  #clouds-bottom { height: 80px; opacity: 0.7; }
+  #clouds-top { height: 100px; opacity: 0.7; }
 }
