@@ -228,6 +228,8 @@ body.night .mobile-menu a:hover { background: rgba(126,184,232,0.08); }
   .hero-right { width: 100%; margin-top: 0; }
   #lottie-wrap { width: min(420px, 100%); margin: 0 auto; }
   .love-cat-wrap, .cry-cat-wrap { width: 110px; left: 2%; }
+  #love-cat, #cry-cat { width: 110px !important; }
+  .lamp-glow { width: 110px !important; height: 180px !important; }
   .float-code { font-size: 10px; }
 
   /* ABOUT */
@@ -370,6 +372,8 @@ body.night .mobile-menu a:hover { background: rgba(126,184,232,0.08); }
   #lottie-wrap { width: min(300px, 100%); }
   .float-code { display: none; }
   .love-cat-wrap, .cry-cat-wrap { width: 90px; }
+  #love-cat, #cry-cat { width: 90px !important; }
+  .lamp-glow { width: 90px !important; height: 150px !important; }
   #sun, #moon { width: 50px; height: 50px; top: 56px; right: 56px; }
   .sun-body { width: 50px !important; height: 50px !important; }
   .moon-body { width: 50px !important; height: 50px !important; }
@@ -1489,6 +1493,19 @@ html { scroll-behavior: smooth; }
 @keyframes landingExit {
   0%   { opacity: 1; transform: translateY(0); }
   100% { opacity: 0; transform: translateY(-100vh); }
+}
+
+/* mobile — keep everything inside a short viewport, no overflow */
+@media (max-width: 600px) {
+  #roro-landing {
+    height: 100dvh;
+    padding: 16px;
+    gap: 6px;
+  }
+  #landing-name { font-size: clamp(36px, 11vw, 60px); }
+  #landing-cat { width: 100px; height: 100px; margin: 0; }
+  #landing-tagline { font-size: 11px; letter-spacing: 3px; margin-bottom: 20px; }
+  #landing-bar-wrap { width: min(180px, 70vw); }
 }
 </style>
 
